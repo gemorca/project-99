@@ -213,6 +213,6 @@ Kode sumber, desain, dan aset dalam repositori ini dibuat dan dimiliki sepenuhny
 
 <div align="center">
 
-**E-LKPD Interaktif IPA STEAM** · Dibuat sendiri oleh Moh. Agil S. Abdul di Gorontalo.
+**E-LKPD Interaktif IPA STEAM** · Dibuat sendiri oleh Moh. Agil S. Abdul.
 
 </div>
