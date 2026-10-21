@@ -207,7 +207,7 @@ Seluruh antarmuka, kode, dan desain proyek ini dibuat sepenuhnya oleh:
 
 Hak Cipta © 2026 **Moh. Agil S. Abdul**. Seluruh hak dilindungi (*All Rights Reserved*).
 
-Kode sumber, desain, dan aset dalam repositori ini dibuat dan dimiliki sepenuhnya oleh pemilik hak cipta. Dilarang menyalin, memodifikasi, mendistribusikan, atau menggunakan ulang sebagian maupun seluruh isi proyek ini untuk tujuan apa pun tanpa izin tertulis dari pemilik.
+Kode sumber, desain, dan aset dalam repositori ini dibuat dan dimiliki sepenuhnya oleh pemilik hak cipta. Anda bebas memakai, mengubah, dan membagikannya dengan tetap mencantumkan pemberitahuan hak cipta di atas.
 
 ---
 
