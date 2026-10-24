@@ -106,8 +106,8 @@ Aplikasi berjalan sepenuhnya di browser dengan **JavaScript ES Module tanpa pros
 Aplikasi memakai **ES Module**, jadi tidak bisa dibuka langsung lewat `file://`. Gunakan server statis apa saja.
 
 ```bash
-git clone https://github.com/gemorca/<nama-repo>.git
-cd <nama-repo>
+git clone https://github.com/gemorca/project-99.git
+cd project-99
 
 # pilih salah satu
 python -m http.server 8000
