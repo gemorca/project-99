@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const SHELL_CACHE = `elkpd-steam-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `elkpd-steam-runtime-${CACHE_VERSION}`;
 const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwguqi5nD3KayEz0iGmQdD5CUzRZSYimP0Y6MRynOa1tRnjjrRcCkPcN4W-_pEn8LNOcg/exec';
@@ -17,6 +17,7 @@ const SHELL_ASSETS = [
     './js/state.js',
     './js/components/canvas-steam.js',
     './js/components/drawer.js',
+    './js/components/field-map-editor.js',
     './js/components/modal.js',
     './js/components/pdf-overlay.js',
     './js/components/sound.js',
@@ -28,6 +29,7 @@ const SHELL_ASSETS = [
     './js/games/simulator.js',
     './js/games/word-search.js',
     './js/services/api.js',
+    './js/services/auto-detect.js',
     './js/services/idb.js',
     './js/services/pwa-install.js',
     './js/services/ocr.js',

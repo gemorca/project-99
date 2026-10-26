@@ -38,7 +38,14 @@ export const uiState = {
   renderScaleGuru: 1.0,
   currentActiveLkpdContext: {},
   activeLkpdFitMode: 'fit',
-  activeLkpdScale: 1.0
+  activeLkpdScale: 1.0,
+  // Editor field mapping (guru)
+  selectedFieldGuru: null,
+  zoomGuru: 1,
+  modeGuru: 'draw',
+  dirtyGuru: false,
+  autoDetectRunningGuru: false,
+  autoDetectCancelGuru: false
 };
 
 export function saveSessionState() {
