@@ -3,7 +3,7 @@ export const DB_NAME = 'ELKPD_STEAM_DB';
 export const DB_VERSION = 1;
 
 export const GAS_API_URL =
-  'https://script.google.com/macros/s/AKfycbwM5ZoQDpgpURwm3aVaK1GMJCKcs_04OkGPqzbHlO5tcz5pQt10vgaokyL1XmOk7ftx/exec';
+  'https://script.google.com/macros/s/AKfycbxJ7zWwSJKMP0R8Et-nthmtw4Ff8fceEfPz0qwAii6pzwVJLfHpUN4qvaYvY-Gp6baKJg/exec';
 
 export const CACHE_KEY = 'ELKPD_STEAM_CACHE_DATA_V3';
 

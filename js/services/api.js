@@ -113,7 +113,7 @@ export async function refreshSubmissionsData() {
 }
 
 export async function apiPost(payload) {
-  const isSubmissionAction = ['submit_lkpd', 'submit_game', 'submit_lkpd_isian', 'save_review'].includes(payload.action);
+  const isSubmissionAction = ['submit_lkpd', 'submit_game', 'submit_lkpd_isian', 'save_review', 'submit_evaluasi'].includes(payload.action);
 
   if (isSubmissionAction) {
     const queueId = 'QUEUE_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
