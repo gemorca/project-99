@@ -62,6 +62,7 @@ export function togglePasswordVisibility(inputId, btnElem) {
   if (btnElem) {
     btnElem.innerHTML = isPassword ? '🙈' : '👁️';
     btnElem.setAttribute('title', isPassword ? 'Sembunyikan Password' : 'Lihat Password');
+    btnElem.setAttribute('aria-label', isPassword ? 'Sembunyikan password' : 'Tampilkan password');
   }
 }
 

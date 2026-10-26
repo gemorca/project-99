@@ -17,6 +17,8 @@ import { escapeHtml as e } from '../services/html.js';
 export function toggleDrawer(isOpen) {
   const drawer = document.getElementById('main-drawer');
   const backdrop = document.getElementById('drawer-backdrop');
+  const burger = document.querySelector('[aria-label="Buka menu"]');
+  if (burger) burger.setAttribute('aria-expanded', String(Boolean(isOpen)));
   if (isOpen) {
     drawer.classList.remove('-translate-x-full');
     backdrop.classList.remove('hidden');
@@ -164,7 +166,8 @@ export function renderGuruNav(container) {
         ? 'bg-brand-yellow text-slate-950 font-extrabold shadow-md'
         : 'text-slate-300 hover:bg-slate-800'
       }`;
-    btn.innerHTML = `<span>${m.icon}</span><span>${m.title}</span>`;
+    btn.innerHTML = `<span aria-hidden="true">${m.icon}</span><span>${m.title}</span>`;
+    if (state.currentView === m.id) btn.setAttribute('aria-current', 'page');
     container.appendChild(btn);
   });
 }
@@ -185,7 +188,8 @@ export function renderAdminNav(container) {
         ? 'bg-brand-yellow text-slate-950 font-extrabold shadow-md'
         : 'text-slate-300 hover:bg-slate-800'
       }`;
-    btn.innerHTML = `<span>${m.icon}</span><span>${m.title}</span>`;
+    btn.innerHTML = `<span aria-hidden="true">${m.icon}</span><span>${m.title}</span>`;
+    if (state.currentView === m.id) btn.setAttribute('aria-current', 'page');
     container.appendChild(btn);
   });
 }

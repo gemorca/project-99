@@ -8,7 +8,6 @@ body {
     font-family: "Nunito", sans-serif;
     background-color: #0b2545;
     color: #1e293b;
-    user-select: none;
     -webkit-tap-highlight-color: transparent;
 }
 
@@ -101,11 +100,20 @@ input:focus,
 textarea:focus,
 select:focus {
     outline: none;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.35);
+}
+
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible,
+summary:focus-visible {
+    outline: 3px solid #0D6EFD;
+    outline-offset: 2px;
 }
 
 #lkpd-fullscreen-scroll-body {
     -webkit-overflow-scrolling: touch !important;
-    touch-action: pan-y !important;
+    touch-action: pan-x pan-y pinch-zoom !important;
     overflow-y: auto !important;
     scroll-behavior: smooth;
 }
@@ -131,7 +139,7 @@ select:focus {
 }
 
 #lkpd-fullscreen-modal {
-    touch-action: pan-y;
+    touch-action: pan-x pan-y pinch-zoom;
 }
 
 @media print {
@@ -162,5 +170,53 @@ select:focus {
     select,
     .lkpd-fill-input {
         font-size: 16px !important;
+    }
+}
+
+/* Tahap 4: keterbacaan */
+button,
+.draggable-item,
+nav,
+summary {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* teks kecil dinaikkan agar terbaca di HP */
+.text-\[9px\] { font-size: 11px !important; }
+.text-\[10px\] { font-size: 12px !important; }
+.text-\[11px\] { font-size: 13px !important; }
+
+body {
+    line-height: 1.5;
+}
+
+/* target sentuh minimal 44px di layar sentuh */
+@media (pointer: coarse) {
+    button,
+    select,
+    [role="button"],
+    input[type="text"],
+    input[type="number"],
+    input[type="password"],
+    input[type="search"] {
+        min-height: 44px;
+    }
+
+    button {
+        min-width: 44px;
+    }
+
+    input.lkpd-fill-input,
+    textarea.lkpd-fill-input {
+        min-height: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }

@@ -8,6 +8,7 @@ import { renderHotspotGameBody, scoreHotspotAnswers } from '../games/hotspot.js'
 import { apiPost, fetchAllInitialData } from '../services/api.js';
 import { state } from '../state.js';
 import { escapeHtml as e, jsArg, safeUrl } from '../services/html.js';
+import { labelGame } from '../services/labels.js';
 
 export function renderGameView(ptmId) {
   const ptmGames = (state.cachedData.games || []).filter((g) => g.id_pertemuan === ptmId && g.status === 'Publish');
@@ -49,7 +50,7 @@ export function renderSingleGameCard(g, gameIdx, ptmId) {
       <div class="flex items-center justify-between border-b pb-2">
         <div>
           <span class="px-2.5 py-0.5 bg-purple-100 text-purple-800 font-extrabold text-[10px] rounded-full uppercase">
-            Game ${gameIdx + 1}: ${e(tipe)}
+            Game ${gameIdx + 1}: ${e(labelGame(tipe))}
           </span>
           <h4 class="font-black text-brand-navy text-sm font-heading mt-1">${e(g.judul_game)}</h4>
         </div>

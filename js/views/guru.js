@@ -5,6 +5,7 @@ import { collectHotspotItem, renderHotspotConfigForm, renderHotspotItemRow } fro
 import { apiPost, fetchAllInitialData, refreshSubmissionsData, saveToLocalStorage } from '../services/api.js';
 import { state } from '../state.js';
 import { jsArg } from '../services/html.js';
+import { labelGame, labelLkpdTipe, labelMedia } from '../services/labels.js';
 import { buildRekap, buildRingkasanSiswa, csvDetailSubmisi, csvRekapMatriks, escapeHtml, filterSiswa, filterSubmisi, getNilaiSubmisi, KOLOM_TIPE, labelModul, labelTipe, statistikKelas } from '../services/nilai.js';
 import { populateKelasSelects } from '../views/admin.js';
 
@@ -56,7 +57,7 @@ export function renderGuruMateriView(container) {
         (m) => `
           <div class="bg-white p-4 rounded-3xl border flex flex-col justify-between space-y-2">
             <div>
-              <span class="px-2 py-0.5 bg-purple-100 text-purple-800 font-bold text-[10px] rounded-full">${escapeHtml(m.tipe_media)}</span>
+              <span class="px-2 py-0.5 bg-purple-100 text-purple-800 font-bold text-[10px] rounded-full">${escapeHtml(labelMedia(m.tipe_media))}</span>
               <h4 class="font-black text-brand-navy mt-1">${escapeHtml(m.judul_materi)}</h4>
             </div>
             <div class="flex justify-end gap-1 pt-2 border-t">
@@ -86,7 +87,7 @@ export function renderGuruLkpdView(container) {
         (l) => `
           <div class="bg-white p-4 rounded-3xl border flex items-center justify-between gap-3">
             <div>
-              <span class="px-2 py-0.5 bg-blue-100 text-brand-blue font-bold text-[10px] rounded-full uppercase">${escapeHtml(l.tipe_lkpd || 'manual')}</span>
+              <span class="px-2 py-0.5 bg-blue-100 text-brand-blue font-bold text-[10px] rounded-full uppercase">${escapeHtml(labelLkpdTipe(l.tipe_lkpd))}</span>
               <h4 class="font-black text-brand-navy mt-1">${escapeHtml(l.judul_lkpd)}</h4>
               <p class="text-slate-500">${escapeHtml(l.instruksi)}</p>
             </div>
@@ -121,7 +122,7 @@ export function renderGuruGameView(container) {
         (g) => `
           <div class="bg-white p-4 rounded-3xl border flex items-center justify-between">
             <div>
-              <span class="px-2 py-0.5 bg-purple-100 text-purple-800 font-bold text-[10px] rounded-full uppercase">${escapeHtml(g.tipe_game)}</span>
+              <span class="px-2 py-0.5 bg-purple-100 text-purple-800 font-bold text-[10px] rounded-full uppercase">${escapeHtml(labelGame(g.tipe_game))}</span>
               <h4 class="font-black text-brand-navy mt-1">${escapeHtml(g.judul_game)}</h4>
               <p class="text-slate-500">${escapeHtml(g.instruksi)}</p>
             </div>

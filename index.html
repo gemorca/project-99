@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>E-LKPD Interaktif IPA STEAM - UNG</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -72,11 +72,11 @@
 
           <div class="flex items-center justify-between md:hidden pb-2 border-b border-slate-800">
             <span class="text-xs font-bold text-slate-400">NAVIGASI SISTEM</span>
-            <button onclick="toggleDrawer(false)" class="text-slate-400 hover:text-white text-xl font-bold p-1">&times;</button>
+            <button onclick="toggleDrawer(false)" aria-label="Tutup menu" class="text-slate-400 hover:text-white text-xl font-bold p-1">&times;</button>
           </div>
 
           <div class="text-center pb-4 border-b border-slate-800 space-y-1 relative">
-            <button id="sound-toggle-btn" onclick="toggleSound()" title="Suara aktif — klik untuk matikan" class="absolute right-0 top-0 text-base p-1.5 rounded-xl hover:bg-slate-800 transition">🔊</button>
+            <button id="sound-toggle-btn" aria-label="Nyalakan atau matikan suara" onclick="toggleSound()" title="Suara aktif — klik untuk matikan" class="absolute right-0 top-0 text-base p-1.5 rounded-xl hover:bg-slate-800 transition">🔊</button>
             <div class="flex items-center justify-center gap-2">
               <img 
                 src="https://1.bp.blogspot.com/-xkZtJ1UFQUo/V8Q8I8nEulI/AAAAAAAAABk/cdOB-vEXEjkaOhQSIdC6eg5ESt52nlu_wCLcB/s1600/logo%2Bung.png" 
@@ -114,7 +114,7 @@
 
         <header class="p-3 sm:p-4 bg-white border-b border-slate-200 flex items-center justify-between sticky top-0 z-20 shadow-xs">
           <div class="flex items-center gap-3">
-            <button onclick="toggleDrawer(true)" class="md:hidden p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 font-bold text-lg">
+            <button onclick="toggleDrawer(true)" aria-label="Buka menu" aria-expanded="false" class="md:hidden p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-700 font-bold text-lg">
               ☰
             </button>
             <div>
@@ -138,7 +138,7 @@
     </div>
   </div>
 
-  <div id="pdf-fullscreen-modal" class="fixed inset-0 bg-slate-950/95 z-50 hidden flex-col p-2 sm:p-4">
+  <div id="pdf-fullscreen-modal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-950/95 z-50 hidden flex-col p-2 sm:p-4">
     <div class="flex items-center justify-between pb-2 text-white border-b border-slate-800">
       <span id="pdf-fullscreen-title" class="font-bold text-xs font-heading">Dokumen PDF</span>
       <div class="flex items-center gap-2">
@@ -151,7 +151,7 @@
     </div>
   </div>
 
-  <div id="login-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+  <div id="login-modal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4">
       <div class="text-center space-y-1">
         <div class="w-12 h-12 bg-blue-100 text-brand-blue rounded-2xl flex items-center justify-center text-xl font-bold mx-auto">🔑</div>
@@ -169,7 +169,7 @@
           <label class="block font-bold text-slate-700 mb-1">Password</label>
           <div class="relative">
             <input type="password" id="login-password" autocomplete="current-password" placeholder="Masukkan password" class="w-full p-2.5 pr-10 rounded-xl border border-slate-300 font-bold text-xs focus:ring-2 focus:ring-brand-blue focus:outline-none" required />
-            <button type="button" id="btn-toggle-login-password" onclick="togglePasswordVisibility('login-password', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800 text-sm focus:outline-none p-1" title="Lihat Password">
+            <button type="button" id="btn-toggle-login-password" aria-label="Tampilkan atau sembunyikan password" onclick="togglePasswordVisibility('login-password', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800 text-sm focus:outline-none p-1" title="Lihat Password">
               👁️
             </button>
           </div>
@@ -183,11 +183,11 @@
     </div>
   </div>
 
-  <div id="user-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+  <div id="user-modal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 text-xs">
       <div class="flex items-center justify-between pb-3 border-b">
         <h3 class="text-base font-black text-brand-navy font-heading">Tambah / Edit Pengguna</h3>
-        <button onclick="closeUserModal()" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
+        <button onclick="closeUserModal()" aria-label="Tutup" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
       </div>
       <form onsubmit="handleUserSubmit(event)" autocomplete="off" class="space-y-3">
         <input type="hidden" id="user-form-id" />
@@ -204,7 +204,7 @@
             <label class="block font-bold text-slate-700 mb-1">Password</label>
             <div class="relative">
               <input type="password" id="user-form-password" autocomplete="new-password" required placeholder="******" class="w-full p-2.5 pr-10 rounded-xl border border-slate-300 font-bold focus:ring-2 focus:ring-brand-blue focus:outline-none" />
-              <button type="button" id="btn-toggle-user-password" onclick="togglePasswordVisibility('user-form-password', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800 text-sm focus:outline-none p-1" title="Lihat Password">
+              <button type="button" id="btn-toggle-user-password" aria-label="Tampilkan atau sembunyikan password" onclick="togglePasswordVisibility('user-form-password', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800 text-sm focus:outline-none p-1" title="Lihat Password">
                 👁️
               </button>
             </div>
@@ -233,11 +233,11 @@
     </div>
   </div>
 
-  <div id="kelas-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+  <div id="kelas-modal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4 text-xs">
       <div class="flex items-center justify-between pb-3 border-b">
         <h3 class="text-base font-black text-brand-navy font-heading">Tambah Data Kelas</h3>
-        <button onclick="closeKelasModal()" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
+        <button onclick="closeKelasModal()" aria-label="Tutup" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
       </div>
       <form onsubmit="handleKelasSubmit(event)" autocomplete="off" class="space-y-3">
         <input type="hidden" id="kelas-form-id" />
@@ -261,11 +261,11 @@
     </div>
   </div>
 
-  <div id="pertemuan-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+  <div id="pertemuan-modal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 text-xs">
       <div class="flex items-center justify-between pb-3 border-b">
         <h3 id="pertemuan-modal-title" class="text-base font-black text-brand-navy font-heading">Buat Pertemuan Pembelajaran</h3>
-        <button onclick="closePertemuanModal()" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
+        <button onclick="closePertemuanModal()" aria-label="Tutup" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
       </div>
       <form onsubmit="handlePertemuanSubmit(event)" autocomplete="off" class="space-y-3">
         <input type="hidden" id="pertemuan-form-id" />
@@ -312,11 +312,11 @@
     </div>
   </div>
 
-  <div id="materi-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+  <div id="materi-modal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto text-xs">
       <div class="flex items-center justify-between pb-3 border-b">
         <h3 id="materi-modal-title" class="text-base font-black text-brand-navy font-heading">Tambah Bahan Ajar Materi</h3>
-        <button onclick="closeMateriModal()" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
+        <button onclick="closeMateriModal()" aria-label="Tutup" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
       </div>
 
       <form onsubmit="handleMateriSubmit(event)" autocomplete="off" class="space-y-3">
@@ -364,11 +364,11 @@
     </div>
   </div>
 
-  <div id="lkpd-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+  <div id="lkpd-modal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto text-xs">
       <div class="flex items-center justify-between pb-3 border-b">
         <h3 id="lkpd-modal-title" class="text-base font-black text-brand-navy font-heading">Kelola LKPD Pertemuan</h3>
-        <button onclick="closeLkpdModal()" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
+        <button onclick="closeLkpdModal()" aria-label="Tutup" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
       </div>
 
       <form onsubmit="handleLkpdSubmit(event)" autocomplete="off" class="space-y-3">
@@ -447,11 +447,11 @@
     </div>
   </div>
 
-  <div id="game-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+  <div id="game-modal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto text-xs">
       <div class="flex items-center justify-between pb-3 border-b">
         <h3 id="game-modal-title" class="text-base font-black text-brand-navy font-heading">Konfigurasi Game Interaktif</h3>
-        <button onclick="closeGameModal()" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
+        <button onclick="closeGameModal()" aria-label="Tutup" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
       </div>
 
       <form onsubmit="handleGameSubmit(event)" autocomplete="off" class="space-y-3">
@@ -502,11 +502,11 @@
     </div>
   </div>
 
-  <div id="soal-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+  <div id="soal-modal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto text-xs">
       <div class="flex items-center justify-between pb-3 border-b">
         <h3 id="soal-modal-title" class="text-base font-black text-brand-navy font-heading">Tambah Soal Evaluasi</h3>
-        <button onclick="closeSoalModal()" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
+        <button onclick="closeSoalModal()" aria-label="Tutup" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
       </div>
 
       <form onsubmit="handleSoalSubmit(event)" autocomplete="off" class="space-y-3">
@@ -558,14 +558,14 @@
     </div>
   </div>
 
-  <div id="koreksi-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+  <div id="koreksi-modal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto text-xs">
       <div class="flex items-center justify-between pb-3 border-b">
         <div>
           <h3 class="text-base font-black text-brand-navy font-heading">📝 Koreksi & Penilaian Siswa</h3>
           <p id="koreksi-siswa-info" class="text-[11px] text-slate-500 font-bold mt-0.5"></p>
         </div>
-        <button onclick="closeKoreksiModal()" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
+        <button onclick="closeKoreksiModal()" aria-label="Tutup" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
       </div>
 
       <div id="koreksi-detail-body" class="space-y-4"></div>
@@ -591,7 +591,7 @@
     </div>
   </div>
 
-<div id="lkpd-fullscreen-modal" class="fixed inset-0 bg-slate-950 z-50 hidden flex-col w-screen h-screen overflow-hidden">
+<div id="lkpd-fullscreen-modal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-950 z-50 hidden flex-col w-screen h-screen overflow-hidden">
   <div class="flex items-center justify-between p-3 bg-slate-900 text-white border-b border-slate-800 shrink-0 shadow-md">
     <div class="flex items-center gap-2">
       <button onclick="closeLkpdFullscreenModal()" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs transition">
@@ -627,11 +627,11 @@
   </div>
 </div>
 
-<div id="evaluasi-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
+<div id="evaluasi-modal" role="dialog" aria-modal="true" class="fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-50 hidden items-center justify-center p-4">
   <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 text-xs">
     <div class="flex items-center justify-between pb-3 border-b">
       <h3 id="evaluasi-modal-title" class="text-base font-black text-brand-navy font-heading">Pengaturan Modul Evaluasi</h3>
-      <button onclick="closeEvaluasiModal()" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
+      <button onclick="closeEvaluasiModal()" aria-label="Tutup" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
     </div>
 
     <form onsubmit="handleEvaluasiSubmit(event)" autocomplete="off" class="space-y-3">
