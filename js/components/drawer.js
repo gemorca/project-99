@@ -8,6 +8,8 @@ import { renderEvaluasiView } from '../views/evaluasi.js';
 import { renderGameView } from '../views/game.js';
 import { renderGuruGameView, renderGuruKoreksiView, renderGuruLkpdView, renderGuruMateriView, renderGuruPertemuanView, renderGuruRekapView, renderGuruSoalView } from '../views/guru.js';
 import { renderHomeView } from '../views/home.js';
+import { renderPertemuanTabs } from './ptm-tabs.js';
+import { getPertemuanSiswa, getProgresPertemuan, markMateriDibaca, ringkasProgres } from '../services/progress.js';
 import { loadLkpdDraft, renderLkpdView } from '../views/lkpd.js';
 import { renderMateriView } from '../views/materi.js';
 import { renderRuangSteamView, updateSteamPertemuanInfo } from '../views/steam-lab.js';
@@ -67,10 +69,8 @@ export function renderSiswaNav(container) {
   steamBtn.innerHTML = `<span>🎨</span><span>Ruang STEAM Lab</span>`;
   container.appendChild(steamBtn);
 
-  const userKelas = state.currentUser?.kelas || 'ALL';
-  const pertemuanList = (state.cachedData.pertemuan || [])
-    .filter((p) => p.status === 'Publish' && (p.id_kelas === 'ALL' || p.id_kelas === userKelas))
-    .sort((a, b) => Number(a.nomor_pertemuan) - Number(b.nomor_pertemuan));
+  const pertemuanList = getPertemuanSiswa();
+  const login = Boolean(state.currentUser);
 
   if (pertemuanList.length > 0) {
     const titleDiv = document.createElement('div');
@@ -87,11 +87,14 @@ export function renderSiswaNav(container) {
       const hasGame = state.cachedData.games.some((g) => g.id_pertemuan === ptmId && g.status === 'Publish');
       const hasEvaluasi = state.cachedData.evaluasi.some((e) => e.id_pertemuan === ptmId && e.status === 'Publish');
 
+      const progres = getProgresPertemuan(ptmId);
+      const ringkas = ringkasProgres(progres);
       const groupWrapper = document.createElement('div');
       groupWrapper.className = 'space-y-1 bg-slate-900/60 p-2 rounded-2xl border border-slate-800/80';
       groupWrapper.innerHTML = `
-        <div class="font-bold text-brand-yellow text-[11px] px-2 py-1 uppercase font-heading">
-          Pertemuan ${e(ptm.nomor_pertemuan)}: ${e(ptm.judul_pertemuan)}
+        <div class="font-bold text-brand-yellow text-[11px] px-2 py-1 uppercase font-heading flex items-start justify-between gap-2">
+          <span>Pertemuan ${e(ptm.nomor_pertemuan)}: ${e(ptm.judul_pertemuan)}</span>
+          ${login && ringkas.total > 0 ? `<span class="shrink-0 text-emerald-300 normal-case">${ringkas.selesai}/${ringkas.total}</span>` : ''}
         </div>
       `;
 
@@ -100,7 +103,8 @@ export function renderSiswaNav(container) {
           createSubNavButton(
             `📖 Bahan Ajar`,
             () => switchView('materi-ptm', ptmId),
-            state.currentView === 'materi-ptm' && state.activePertemuanId === ptmId
+            state.currentView === 'materi-ptm' && state.activePertemuanId === ptmId,
+            login && progres.materi?.done
           )
         );
       if (hasLkpd)
@@ -108,7 +112,8 @@ export function renderSiswaNav(container) {
           createSubNavButton(
             `📝 LKPD Siswa`,
             () => switchView('lkpd-ptm', ptmId),
-            state.currentView === 'lkpd-ptm' && state.activePertemuanId === ptmId
+            state.currentView === 'lkpd-ptm' && state.activePertemuanId === ptmId,
+            login && progres.lkpd?.done
           )
         );
       if (hasGame)
@@ -116,7 +121,8 @@ export function renderSiswaNav(container) {
           createSubNavButton(
             `🎮 Game Interaktif`,
             () => switchView('game-ptm', ptmId),
-            state.currentView === 'game-ptm' && state.activePertemuanId === ptmId
+            state.currentView === 'game-ptm' && state.activePertemuanId === ptmId,
+            login && progres.game?.done
           )
         );
       if (hasEvaluasi)
@@ -124,7 +130,8 @@ export function renderSiswaNav(container) {
           createSubNavButton(
             `✍️ Evaluasi Kuis`,
             () => switchView('evaluasi-ptm', ptmId),
-            state.currentView === 'evaluasi-ptm' && state.activePertemuanId === ptmId
+            state.currentView === 'evaluasi-ptm' && state.activePertemuanId === ptmId,
+            login && progres.evaluasi?.done
           )
         );
 
@@ -133,7 +140,7 @@ export function renderSiswaNav(container) {
   }
 }
 
-export function createSubNavButton(label, onClickFn, isActive) {
+export function createSubNavButton(label, onClickFn, isActive, isDone = false) {
   const btn = document.createElement('button');
   btn.onclick = () => {
     onClickFn();
@@ -141,7 +148,9 @@ export function createSubNavButton(label, onClickFn, isActive) {
   };
   btn.className = `w-full text-left px-3 py-1.5 rounded-xl font-medium transition text-[11px] flex items-center justify-between ${isActive ? 'bg-brand-blue text-white font-bold' : 'text-slate-300 hover:bg-slate-800'
     }`;
-  btn.innerHTML = `<span>${label}</span> <span>&rarr;</span>`;
+  btn.innerHTML = isDone
+    ? `<span>${label}</span> <span class="text-emerald-300 font-black" aria-hidden="true">✓</span><span class="sr-only">selesai</span>`
+    : `<span>${label}</span> <span>&rarr;</span>`;
   return btn;
 }
 
@@ -211,6 +220,7 @@ export async function switchView(viewId, paramId = null) {
     if (!state.isDataLoaded) return;
   }
 
+  if (viewId === 'materi-ptm' && state.currentUser) markMateriDibaca(paramId);
   renderSidebarNav();
 
   switch (viewId) {
@@ -233,12 +243,12 @@ export async function switchView(viewId, paramId = null) {
 
     case 'materi-ptm':
       titleElem.textContent = 'BAHAN AJAR MATERI';
-      viewport.innerHTML = renderMateriView(paramId);
+      viewport.innerHTML = renderPertemuanTabs(paramId, viewId) + renderMateriView(paramId);
       break;
 
     case 'lkpd-ptm':
       titleElem.textContent = 'LEMBAR KERJA PESERTA DIDIK (LKPD)';
-      viewport.innerHTML = renderLkpdView(paramId);
+      viewport.innerHTML = renderPertemuanTabs(paramId, viewId) + renderLkpdView(paramId);
       setTimeout(() => {
         const lkpdObj = (state.cachedData.lkpd || []).find((l) => l.id_pertemuan === paramId && l.status === 'Publish');
         const overlayContainer = document.getElementById('siswa-lkpd-overlay-container');
@@ -252,7 +262,7 @@ export async function switchView(viewId, paramId = null) {
 
     case 'game-ptm':
       titleElem.textContent = 'GAME INTERAKTIF PEMBELAJARAN';
-      viewport.innerHTML = renderGameView(paramId);
+      viewport.innerHTML = renderPertemuanTabs(paramId, viewId) + renderGameView(paramId);
       setTimeout(() => {
         initPointerDragAndDropEngine();
         initMatchingLineEngine();
@@ -262,7 +272,7 @@ export async function switchView(viewId, paramId = null) {
 
     case 'evaluasi-ptm':
       titleElem.textContent = 'EVALUASI PEMBELAJARAN';
-      viewport.innerHTML = renderEvaluasiView(paramId);
+      viewport.innerHTML = renderPertemuanTabs(paramId, viewId) + renderEvaluasiView(paramId);
       break;
 
     case 'admin-users':
@@ -318,5 +328,17 @@ export async function switchView(viewId, paramId = null) {
     MathJax.typesetPromise().catch((err) => console.log('MathJax info:', err));
   }
 }
+
+window.addEventListener('progres-changed', () => {
+  if (!state.isDataLoaded) return;
+  renderSidebarNav();
+  const viewport = document.getElementById('content-viewport');
+  if (state.currentView === 'home' && viewport) {
+    viewport.innerHTML = renderHomeView();
+    return;
+  }
+  const tabs = document.getElementById('ptm-tabs');
+  if (tabs) tabs.outerHTML = renderPertemuanTabs(state.activePertemuanId, state.currentView);
+});
 
 window.toggleDrawer = toggleDrawer;

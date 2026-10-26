@@ -85,6 +85,7 @@ export async function fetchDataFromNetwork() {
       state.isDataLoaded = true;
       await saveToLocalStorage();
       renderSidebarNav();
+      window.dispatchEvent(new Event('progres-changed'));
       return true;
     } else {
       throw new Error(result.message || 'Gagal mengambil data dari database.');

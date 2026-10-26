@@ -2,6 +2,7 @@ import { requireStudentAuth, setButtonLoading, showToast, toastSubmitResult } fr
 import { markDraftForClear } from '../services/outbox-status.js';
 import { CACHE_KEY } from '../config.js';
 import { apiPost, fetchAllInitialData } from '../services/api.js';
+import { markSelesai } from '../services/progress.js';
 import { state } from '../state.js';
 import { escapeHtml as e, jsArg, safeUrl } from '../services/html.js';
 
@@ -197,6 +198,7 @@ export async function submitLkpdSiswa(ptmId, idLkpd, questionCount) {
 
   setButtonLoading(btn, false, '', 'Kirim Jawaban LKPD Manual');
   if (res.success) {
+    markSelesai('lkpd', idLkpd);
     if (res.queued) {
       markDraftForClear(`${CACHE_KEY}_DRAFT_${ptmId}_${user.username}`);
     } else {

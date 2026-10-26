@@ -6,6 +6,7 @@ import { setSimChoice } from '../games/simulator.js';
 import { checkWordSearchMatch } from '../games/word-search.js';
 import { renderHotspotGameBody, scoreHotspotAnswers } from '../games/hotspot.js';
 import { apiPost, fetchAllInitialData } from '../services/api.js';
+import { markSelesai } from '../services/progress.js';
 import { state } from '../state.js';
 import { escapeHtml as e, jsArg, safeUrl } from '../services/html.js';
 import { labelGame } from '../services/labels.js';
@@ -372,6 +373,7 @@ export async function submitGameSiswa(ptmId, idGame, tipe) {
 
   setButtonLoading(btn, false, '', '🎮 Periksa & Simpan Skor Game');
   if (res.success) {
+    markSelesai('game', idGame);
     if (!res.queued) await fetchAllInitialData(true);
     Swal.fire({
       icon: 'success',

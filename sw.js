@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v14';
+const CACHE_VERSION = 'v15';
 const SHELL_CACHE = `elkpd-steam-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `elkpd-steam-runtime-${CACHE_VERSION}`;
 const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxJ7zWwSJKMP0R8Et-nthmtw4Ff8fceEfPz0qwAii6pzwVJLfHpUN4qvaYvY-Gp6baKJg/exec';
@@ -20,6 +20,7 @@ const SHELL_ASSETS = [
     './js/components/field-map-editor.js',
     './js/components/modal.js',
     './js/components/pdf-overlay.js',
+    './js/components/ptm-tabs.js',
     './js/components/sound.js',
     './js/games/drag-drop.js',
     './js/games/hotspot.js',
@@ -40,6 +41,7 @@ const SHELL_ASSETS = [
   './js/services/labels.js',
     './js/services/idb.js',
     './js/services/outbox-status.js',
+    './js/services/progress.js',
     './js/services/pwa-install.js',
     './js/services/ocr.js',
     './js/services/sw-register.js',

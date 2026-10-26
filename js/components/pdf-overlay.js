@@ -2,6 +2,7 @@ import { requireStudentAuth, setButtonLoading, showToast, toastSubmitResult } fr
 import { markDraftForClear } from '../services/outbox-status.js';
 import { CACHE_KEY } from '../config.js';
 import { apiPost } from '../services/api.js';
+import { markSelesai } from '../services/progress.js';
 import { fetchPdfArrayBuffer } from '../services/ocr.js';
 import { state, uiState } from '../state.js';
 import { escapeHtml as e, jsArg } from '../services/html.js';
@@ -355,6 +356,7 @@ export async function submitJawabanLkpdIsian(ptmId, idLkpd, btnEl) {
   setButtonLoading(btn, false, '', origText);
 
   if (res.success) {
+    markSelesai('lkpd', idLkpd);
     if (res.queued) {
       markDraftForClear(`${CACHE_KEY}_DRAFT_OVERLAY_${idLkpd}_${user.username}`);
     } else {
