@@ -4,6 +4,7 @@ import { CACHE_KEY, GAS_API_URL } from '../config.js';
 import { getIDBCache, saveToOutboxQueue, setIDBCache } from '../services/idb.js';
 import { registerServiceWorkerAndSync, triggerOutboxFlushManual } from '../services/sw-register.js';
 import { state } from '../state.js';
+import { escapeHtml } from '../services/html.js';
 
 export async function loadFromLocalStorage() {
   try {
@@ -30,14 +31,34 @@ export async function fetchAllInitialData(forceRefresh = false) {
     await loadFromLocalStorage();
     if (state.isDataLoaded) {
       fetchDataFromNetwork();
-      return;
+      return true;
     }
   }
-  await fetchDataFromNetwork();
+  return fetchDataFromNetwork();
+}
+
+function renderLoadError(message) {
+  const viewport = document.getElementById('content-viewport');
+  if (!viewport || state.isDataLoaded) return;
+  viewport.innerHTML = `
+    <div class="p-8 text-center text-xs space-y-3">
+      <div class="text-red-500 font-bold text-sm">⚠️ Gagal Memuat Data Database</div>
+      <p class="text-slate-600 font-medium">${escapeHtml(message || 'Periksa koneksi internet atau konfigurasi URL backend Google Apps Script.')}</p>
+      <button onclick="retryLoadData()" class="px-4 py-2 bg-brand-blue text-white font-bold rounded-xl shadow">
+        🔄 Coba Muat Ulang Data
+      </button>
+    </div>
+  `;
+}
+
+export async function retryLoadData() {
+  showLoading('Memuat ulang data...');
+  await fetchAllInitialData(true);
+  closeLoading();
+  if (state.isDataLoaded) switchView(state.currentView, state.activePertemuanId);
 }
 
 export async function fetchDataFromNetwork() {
-  const viewport = document.getElementById('content-viewport');
   try {
     const res = await fetch(`${GAS_API_URL}?action=get_all_data`);
     
@@ -64,22 +85,14 @@ export async function fetchDataFromNetwork() {
       state.isDataLoaded = true;
       await saveToLocalStorage();
       renderSidebarNav();
+      return true;
     } else {
       throw new Error(result.message || 'Gagal mengambil data dari database.');
     }
   } catch (err) {
     console.error('Gagal memuat data dari database:', err);
-    if (viewport && !state.isDataLoaded) {
-      viewport.innerHTML = `
-        <div class="p-8 text-center text-xs space-y-3">
-          <div class="text-red-500 font-bold text-sm">⚠️ Gagal Memuat Data Database</div>
-          <p class="text-slate-600 font-medium">${err.message || 'Periksa koneksi internet atau konfigurasi URL backend Google Apps Script.'}</p>
-          <button onclick="refreshSubmissionsData()" class="px-4 py-2 bg-brand-blue text-white font-bold rounded-xl shadow">
-            🔄 Coba Muat Ulang Data
-          </button>
-        </div>
-      `;
-    }
+    renderLoadError(err.message);
+    return false;
   }
 }
 
@@ -157,3 +170,4 @@ export async function apiPost(payload) {
 }
 
 window.refreshSubmissionsData = refreshSubmissionsData;
+window.retryLoadData = retryLoadData;

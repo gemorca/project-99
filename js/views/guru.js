@@ -4,6 +4,7 @@ import { openModalPetakanFieldGuru } from '../components/pdf-overlay.js';
 import { collectHotspotItem, renderHotspotConfigForm, renderHotspotItemRow } from '../games/hotspot.js';
 import { apiPost, fetchAllInitialData, refreshSubmissionsData, saveToLocalStorage } from '../services/api.js';
 import { state } from '../state.js';
+import { jsArg } from '../services/html.js';
 import { buildRekap, buildRingkasanSiswa, csvDetailSubmisi, csvRekapMatriks, escapeHtml, filterSiswa, filterSubmisi, getNilaiSubmisi, KOLOM_TIPE, labelModul, labelTipe, statistikKelas } from '../services/nilai.js';
 import { populateKelasSelects } from '../views/admin.js';
 
@@ -25,12 +26,12 @@ export function renderGuruPertemuanView(container) {
           <div class="bg-white p-4 rounded-3xl border flex items-center justify-between">
             <div>
               <span class="px-2 py-0.5 bg-blue-100 text-brand-blue font-black rounded-full text-[10px]">Pertemuan ${p.nomor_pertemuan}</span>
-              <h4 class="font-black text-brand-navy text-xs mt-1">${p.judul_pertemuan}</h4>
-              <p class="text-slate-500 text-[11px]">${p.deskripsi}</p>
+              <h4 class="font-black text-brand-navy text-xs mt-1">${escapeHtml(p.judul_pertemuan)}</h4>
+              <p class="text-slate-500 text-[11px]">${escapeHtml(p.deskripsi)}</p>
             </div>
             <div class="flex items-center gap-1">
-              <button onclick="openPertemuanModal('${p.id_pertemuan}')" class="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg font-bold hover:bg-amber-200 transition">Edit</button>
-              <button onclick="deletePertemuan('${p.id_pertemuan}')" class="px-3 py-1 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition">Hapus</button>
+              <button onclick="openPertemuanModal(${jsArg(p.id_pertemuan)})" class="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg font-bold hover:bg-amber-200 transition">Edit</button>
+              <button onclick="deletePertemuan(${jsArg(p.id_pertemuan)})" class="px-3 py-1 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition">Hapus</button>
             </div>
           </div>
         `
@@ -55,12 +56,12 @@ export function renderGuruMateriView(container) {
         (m) => `
           <div class="bg-white p-4 rounded-3xl border flex flex-col justify-between space-y-2">
             <div>
-              <span class="px-2 py-0.5 bg-purple-100 text-purple-800 font-bold text-[10px] rounded-full">${m.tipe_media}</span>
-              <h4 class="font-black text-brand-navy mt-1">${m.judul_materi}</h4>
+              <span class="px-2 py-0.5 bg-purple-100 text-purple-800 font-bold text-[10px] rounded-full">${escapeHtml(m.tipe_media)}</span>
+              <h4 class="font-black text-brand-navy mt-1">${escapeHtml(m.judul_materi)}</h4>
             </div>
             <div class="flex justify-end gap-1 pt-2 border-t">
-              <button onclick="openMateriModal('${m.id_materi}')" class="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg font-bold hover:bg-amber-200 transition">Edit</button>
-              <button onclick="deleteMateri('${m.id_materi}')" class="px-3 py-1 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition">Hapus</button>
+              <button onclick="openMateriModal(${jsArg(m.id_materi)})" class="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg font-bold hover:bg-amber-200 transition">Edit</button>
+              <button onclick="deleteMateri(${jsArg(m.id_materi)})" class="px-3 py-1 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition">Hapus</button>
             </div>
           </div>
         `
@@ -85,18 +86,17 @@ export function renderGuruLkpdView(container) {
         (l) => `
           <div class="bg-white p-4 rounded-3xl border flex items-center justify-between gap-3">
             <div>
-              <span class="px-2 py-0.5 bg-blue-100 text-brand-blue font-bold text-[10px] rounded-full uppercase">${l.tipe_lkpd || 'manual'
-          }</span>
-              <h4 class="font-black text-brand-navy mt-1">${l.judul_lkpd}</h4>
-              <p class="text-slate-500">${l.instruksi}</p>
+              <span class="px-2 py-0.5 bg-blue-100 text-brand-blue font-bold text-[10px] rounded-full uppercase">${escapeHtml(l.tipe_lkpd || 'manual')}</span>
+              <h4 class="font-black text-brand-navy mt-1">${escapeHtml(l.judul_lkpd)}</h4>
+              <p class="text-slate-500">${escapeHtml(l.instruksi)}</p>
             </div>
             <div class="flex items-center gap-1.5 shrink-0 flex-wrap">
               ${l.file_pdf_url
-            ? `<button onclick="openModalPetakanFieldGuru('${l.id_lkpd}')" class="px-3 py-1 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition shadow">🗺️ Petakan Field</button>`
+            ? `<button onclick="openModalPetakanFieldGuru(${jsArg(l.id_lkpd)})" class="px-3 py-1 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 transition shadow">🗺️ Petakan Field</button>`
             : ''
           }
-              <button onclick="openLkpdModal('${l.id_lkpd}')" class="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg font-bold hover:bg-amber-200 transition">Edit</button>
-              <button onclick="deleteLkpd('${l.id_lkpd}')" class="px-3 py-1 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition">Hapus</button>
+              <button onclick="openLkpdModal(${jsArg(l.id_lkpd)})" class="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg font-bold hover:bg-amber-200 transition">Edit</button>
+              <button onclick="deleteLkpd(${jsArg(l.id_lkpd)})" class="px-3 py-1 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition">Hapus</button>
             </div>
           </div>
         `
@@ -121,13 +121,13 @@ export function renderGuruGameView(container) {
         (g) => `
           <div class="bg-white p-4 rounded-3xl border flex items-center justify-between">
             <div>
-              <span class="px-2 py-0.5 bg-purple-100 text-purple-800 font-bold text-[10px] rounded-full uppercase">${g.tipe_game}</span>
-              <h4 class="font-black text-brand-navy mt-1">${g.judul_game}</h4>
-              <p class="text-slate-500">${g.instruksi}</p>
+              <span class="px-2 py-0.5 bg-purple-100 text-purple-800 font-bold text-[10px] rounded-full uppercase">${escapeHtml(g.tipe_game)}</span>
+              <h4 class="font-black text-brand-navy mt-1">${escapeHtml(g.judul_game)}</h4>
+              <p class="text-slate-500">${escapeHtml(g.instruksi)}</p>
             </div>
             <div class="flex items-center gap-1">
-              <button onclick="openGameModal('${g.id_game}')" class="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg font-bold hover:bg-amber-200 transition">Edit</button>
-              <button onclick="deleteGame('${g.id_game}')" class="px-3 py-1 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition">Hapus</button>
+              <button onclick="openGameModal(${jsArg(g.id_game)})" class="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg font-bold hover:bg-amber-200 transition">Edit</button>
+              <button onclick="deleteGame(${jsArg(g.id_game)})" class="px-3 py-1 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition">Hapus</button>
             </div>
           </div>
         `
@@ -185,13 +185,13 @@ export function renderGuruSoalView(container) {
                           ${isDraft ? 'Draft' : 'Publish'}
                         </span>
                       </div>
-                      <h4 class="font-black text-brand-navy mt-1.5 text-xs">${ev.judul_evaluasi}</h4>
+                      <h4 class="font-black text-brand-navy mt-1.5 text-xs">${escapeHtml(ev.judul_evaluasi)}</h4>
                     </div>
                     <div class="flex flex-col gap-1.5 shrink-0 ml-2">
-                      <button onclick="openEvaluasiModal('${ev.id_evaluasi}')" class="px-3 py-1.5 bg-amber-100 text-amber-800 rounded-xl font-bold hover:bg-amber-200 transition text-[11px]">
+                      <button onclick="openEvaluasiModal(${jsArg(ev.id_evaluasi)})" class="px-3 py-1.5 bg-amber-100 text-amber-800 rounded-xl font-bold hover:bg-amber-200 transition text-[11px]">
                         Edit ✏️
                       </button>
-                      <button onclick="deleteEvaluasi('${ev.id_evaluasi}')" class="px-3 py-1.5 bg-red-100 text-red-700 rounded-xl font-bold hover:bg-red-200 transition text-[11px]">
+                      <button onclick="deleteEvaluasi(${jsArg(ev.id_evaluasi)})" class="px-3 py-1.5 bg-red-100 text-red-700 rounded-xl font-bold hover:bg-red-200 transition text-[11px]">
                         Hapus 🗑️
                       </button>
                     </div>
@@ -217,17 +217,17 @@ export function renderGuruSoalView(container) {
                   <div class="bg-white p-4 rounded-3xl border space-y-1">
                     <div class="flex items-center justify-between border-b pb-1 gap-2">
                       <div class="flex items-center gap-2">
-                        <span class="font-black text-brand-navy">#${idx + 1} Kunci:${s.kunci_jawaban}</span>
+                        <span class="font-black text-brand-navy">#${idx + 1} Kunci:${escapeHtml(s.kunci_jawaban)}</span>
                         <span class="px-2 py-0.5 bg-slate-100 text-slate-600 font-bold text-[9px] rounded-md border border-slate-200">
                           📌 ${soalPtmLabel}
                         </span>
                       </div>
                       <div class="flex items-center gap-1">
-                        <button onclick="openSoalModal('${s.id_soal}')" class="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-lg font-bold hover:bg-amber-200 transition">Edit</button>
-                        <button onclick="deleteSoal('${s.id_soal}')" class="px-2.5 py-1 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition">Hapus</button>
+                        <button onclick="openSoalModal(${jsArg(s.id_soal)})" class="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-lg font-bold hover:bg-amber-200 transition">Edit</button>
+                        <button onclick="deleteSoal(${jsArg(s.id_soal)})" class="px-2.5 py-1 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition">Hapus</button>
                       </div>
                     </div>
-                    <p class="font-bold text-slate-800">${s.pertanyaan}</p>
+                    <p class="font-bold text-slate-800">${escapeHtml(s.pertanyaan)}</p>
                   </div>
                 `;
               }
@@ -346,7 +346,7 @@ export function renderKoreksiList() {
           <td class="p-3 text-center">${nilaiBadge(r.rata)}</td>
           <td class="p-3">${chips || '-'}</td>
           <td class="p-3 text-center">
-            <button onclick="openKoreksiSiswaModal('${encodeURIComponent(r.key)}')" class="px-3 py-1 bg-brand-blue text-white font-bold rounded-lg">Detail</button>
+            <button onclick="openKoreksiSiswaModal(${jsArg(encodeURIComponent(r.key))})" class="px-3 py-1 bg-brand-blue text-white font-bold rounded-lg">Detail</button>
           </td>
         </tr>
       `;
@@ -398,8 +398,8 @@ function renderKoreksiSiswaModal() {
               </div>
               <div class="flex items-center gap-2 shrink-0">
                 ${nilaiBadge(nilai)}
-                <button onclick="openKoreksiModal('${escapeHtml(s.id_sub)}')" class="px-3 py-1 bg-brand-blue text-white font-bold rounded-lg">Periksa</button>
-                <button onclick="deleteSubmisi('${escapeHtml(s.id_sub)}')" class="px-3 py-1 bg-red-100 text-red-700 font-bold rounded-lg hover:bg-red-200 transition">Hapus</button>
+                <button onclick="openKoreksiModal(${jsArg(s.id_sub)})" class="px-3 py-1 bg-brand-blue text-white font-bold rounded-lg">Periksa</button>
+                <button onclick="deleteSubmisi(${jsArg(s.id_sub)})" class="px-3 py-1 bg-red-100 text-red-700 font-bold rounded-lg hover:bg-red-200 transition">Hapus</button>
               </div>
             </div>
           `;
@@ -631,8 +631,8 @@ function sel(c, kkm) {
 function kartuStat(judul, isi, sub = '') {
   return `
     <div class="bg-white p-3 rounded-2xl border shadow-xs">
-      <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">${judul}</span>
-      <span class="block text-base font-black text-brand-navy mt-0.5">${isi}</span>
+      <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">${escapeHtml(judul)}</span>
+      <span class="block text-base font-black text-brand-navy mt-0.5">${escapeHtml(isi)}</span>
       ${sub ? `<span class="block text-[10px] text-slate-500 truncate">${sub}</span>` : ''}
     </div>
   `;
@@ -763,7 +763,7 @@ export function exportRekapDetailCsv() {
 export function populatePertemuanSelects() {
   const ptmList = state.cachedData.pertemuan || [];
   const opts = ptmList
-    .map((p) => `<option value="${p.id_pertemuan}">Pertemuan ${p.nomor_pertemuan}: ${p.judul_pertemuan}</option>`)
+    .map((p) => `<option value="${escapeHtml(p.id_pertemuan)}">Pertemuan ${escapeHtml(p.nomor_pertemuan)}: ${escapeHtml(p.judul_pertemuan)}</option>`)
     .join('');
 
   const mSel = document.getElementById('materi-form-pertemuan');
@@ -1225,11 +1225,11 @@ export function renderGameConfigInputs(existingItems = null) {
       <div class="grid grid-cols-2 gap-2 mb-2">
         <div>
           <label class="block font-bold text-slate-700">Nama Kategori A</label>
-          <input type="text" id="gm-cat-name-a" value="${catA}" class="w-full p-2 border rounded-xl font-bold" />
+          <input type="text" id="gm-cat-name-a" value="${escapeHtml(catA)}" class="w-full p-2 border rounded-xl font-bold" />
         </div>
         <div>
           <label class="block font-bold text-slate-700">Nama Kategori B</label>
-          <input type="text" id="gm-cat-name-b" value="${catB}" class="w-full p-2 border rounded-xl font-bold" />
+          <input type="text" id="gm-cat-name-b" value="${escapeHtml(catB)}" class="w-full p-2 border rounded-xl font-bold" />
         </div>
       </div>
     `;
@@ -1243,7 +1243,7 @@ export function renderGameConfigInputs(existingItems = null) {
       <div class="space-y-2 mb-3">
         <div>
           <label class="block font-bold text-slate-700">Teks Skenario Studi Kasus Proyek</label>
-          <textarea id="gm-sim-scenario" rows="2" placeholder="Contoh: Merancang Oven Tenaga Surya..." class="w-full p-2 border rounded-xl text-[11px]">${scenario}</textarea>
+          <textarea id="gm-sim-scenario" rows="2" placeholder="Contoh: Merancang Oven Tenaga Surya..." class="w-full p-2 border rounded-xl text-[11px]">${escapeHtml(scenario)}</textarea>
         </div>
         <div class="text-[10px] text-purple-700 font-bold">Isikan Parameter & Pilihan Keputusan:</div>
       </div>
@@ -1277,8 +1277,8 @@ export function addGameItemRow(itemData = null) {
     row.innerHTML = `
       ${removeBtnHtml}
       <div class="grid grid-cols-2 gap-2 clear-both">
-        <input type="text" class="gm-input-soal w-full p-2 rounded-xl border text-[11px]" value="${soal}" placeholder="Soal / Teks" />
-        <input type="text" class="gm-input-kunci w-full p-2 rounded-xl border text-[11px]" value="${kunci}" placeholder="Pasangan Kunci" />
+        <input type="text" class="gm-input-soal w-full p-2 rounded-xl border text-[11px]" value="${escapeHtml(soal)}" placeholder="Soal / Teks" />
+        <input type="text" class="gm-input-kunci w-full p-2 rounded-xl border text-[11px]" value="${escapeHtml(kunci)}" placeholder="Pasangan Kunci" />
       </div>
     `;
   } else if (tipe === 'drag_drop') {
@@ -1287,7 +1287,7 @@ export function addGameItemRow(itemData = null) {
     row.innerHTML = `
       ${removeBtnHtml}
       <div class="grid grid-cols-3 gap-2 clear-both">
-        <input type="text" class="gm-input-soal col-span-2 w-full p-2 rounded-xl border text-[11px]" value="${soal}" placeholder="Objek / Teks" />
+        <input type="text" class="gm-input-soal col-span-2 w-full p-2 rounded-xl border text-[11px]" value="${escapeHtml(soal)}" placeholder="Objek / Teks" />
         <select class="gm-input-cat-kunci w-full p-2 rounded-xl border font-bold text-[11px] text-purple-700">
           <option value="A" ${catKunci === 'A' ? 'selected' : ''}>Kategori A</option>
           <option value="B" ${catKunci === 'B' ? 'selected' : ''}>Kategori B</option>
@@ -1301,7 +1301,7 @@ export function addGameItemRow(itemData = null) {
       ${removeBtnHtml}
       <div class="flex items-center gap-2 clear-both">
         <span class="w-6 h-6 rounded-lg bg-purple-100 text-purple-800 font-black text-[10px] flex items-center justify-center shrink-0">${count}</span>
-        <input type="text" class="gm-input-soal w-full p-2 rounded-xl border text-[11px]" value="${soal}" placeholder="Langkah urutan..." />
+        <input type="text" class="gm-input-soal w-full p-2 rounded-xl border text-[11px]" value="${escapeHtml(soal)}" placeholder="Langkah urutan..." />
       </div>
     `;
   } else if (tipe === 'hotspot') {
@@ -1316,11 +1316,11 @@ export function addGameItemRow(itemData = null) {
     row.innerHTML = `
       ${removeBtnHtml}
       <div class="clear-both space-y-1">
-        <input type="text" class="gm-input-param w-full p-2 rounded-xl border text-[11px] font-bold" value="${param}" placeholder="Nama Parameter" />
+        <input type="text" class="gm-input-param w-full p-2 rounded-xl border text-[11px] font-bold" value="${escapeHtml(param)}" placeholder="Nama Parameter" />
         <div class="grid grid-cols-3 gap-1">
-          <input type="text" class="gm-input-opsi-a w-full p-1.5 rounded-lg border text-[10px]" value="${opsiA}" placeholder="Opsi A" />
-          <input type="text" class="gm-input-opsi-b w-full p-1.5 rounded-lg border text-[10px]" value="${opsiB}" placeholder="Opsi B" />
-          <input type="text" class="gm-input-opsi-c w-full p-1.5 rounded-lg border text-[10px]" value="${opsiC}" placeholder="Opsi C" />
+          <input type="text" class="gm-input-opsi-a w-full p-1.5 rounded-lg border text-[10px]" value="${escapeHtml(opsiA)}" placeholder="Opsi A" />
+          <input type="text" class="gm-input-opsi-b w-full p-1.5 rounded-lg border text-[10px]" value="${escapeHtml(opsiB)}" placeholder="Opsi B" />
+          <input type="text" class="gm-input-opsi-c w-full p-1.5 rounded-lg border text-[10px]" value="${escapeHtml(opsiC)}" placeholder="Opsi C" />
         </div>
         <select class="gm-input-kunci w-full p-1.5 rounded-lg border font-bold text-[10px] text-purple-700">
           <option value="A" ${kunci === 'A' ? 'selected' : ''}>Kunci Terbaik: Opsi A</option>
@@ -1334,7 +1334,7 @@ export function addGameItemRow(itemData = null) {
     row.innerHTML = `
       ${removeBtnHtml}
       <div class="clear-both">
-        <input type="text" class="gm-input-soal w-full p-2 rounded-xl border text-[11px] font-mono uppercase" value="${soal}" placeholder="KATA ISTILAH" />
+        <input type="text" class="gm-input-soal w-full p-2 rounded-xl border text-[11px] font-mono uppercase" value="${escapeHtml(soal)}" placeholder="KATA ISTILAH" />
       </div>
     `;
   } else {
@@ -1345,10 +1345,10 @@ export function addGameItemRow(itemData = null) {
     row.innerHTML = `
       ${removeBtnHtml}
       <div class="clear-both space-y-1">
-        <input type="text" class="gm-input-soal w-full p-2 rounded-xl border text-[11px]" value="${soal}" placeholder="Pertanyaan Kuis..." />
+        <input type="text" class="gm-input-soal w-full p-2 rounded-xl border text-[11px]" value="${escapeHtml(soal)}" placeholder="Pertanyaan Kuis..." />
         <div class="grid grid-cols-3 gap-1">
-          <input type="text" class="gm-input-opsi-a w-full p-1.5 rounded-lg border text-[10px]" value="${opsiA}" placeholder="Opsi A" />
-          <input type="text" class="gm-input-opsi-b w-full p-1.5 rounded-lg border text-[10px]" value="${opsiB}" placeholder="Opsi B" />
+          <input type="text" class="gm-input-opsi-a w-full p-1.5 rounded-lg border text-[10px]" value="${escapeHtml(opsiA)}" placeholder="Opsi A" />
+          <input type="text" class="gm-input-opsi-b w-full p-1.5 rounded-lg border text-[10px]" value="${escapeHtml(opsiB)}" placeholder="Opsi B" />
           <select class="gm-input-kunci w-full p-1.5 rounded-lg border font-bold text-[10px] text-purple-700">
             <option value="A" ${kunci === 'A' ? 'selected' : ''}>Kunci A</option>
             <option value="B" ${kunci === 'B' ? 'selected' : ''}>Kunci B</option>
@@ -1630,8 +1630,8 @@ export function openKoreksiModal(idSub) {
         .map(
           (entry, idx) => `
             <div class="p-2.5 bg-white rounded-xl border border-slate-200 text-xs flex justify-between items-center gap-3">
-              <span class="font-bold text-slate-600 shrink-0">${fieldLabels[entry.key] || entry.key || `Isian #${idx + 1}`}:</span>
-              <span class="font-bold text-brand-blue bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-right break-words">${entry.value || '<i class="text-slate-400 font-normal">(Tidak diisi)</i>'
+              <span class="font-bold text-slate-600 shrink-0">${escapeHtml(fieldLabels[entry.key] || entry.key || `Isian #${idx + 1}`)}:</span>
+              <span class="font-bold text-brand-blue bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-right break-words">${entry.value ? escapeHtml(entry.value) : '<i class="text-slate-400 font-normal">(Tidak diisi)</i>'
             }</span>
             </div>
           `
@@ -1643,16 +1643,16 @@ export function openKoreksiModal(idSub) {
           (ans, idx) => `
                 <div class="p-3 bg-white rounded-xl border border-slate-200 space-y-1">
                     <span class="font-bold text-slate-700 text-[11px]">Pertanyaan #${idx + 1}</span>
-                    <p class="text-slate-800 font-medium whitespace-pre-wrap bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-xs">${ans ? ans.trim() : '<i class="text-slate-400">(Tidak diisi)</i>'
+                    <p class="text-slate-800 font-medium whitespace-pre-wrap bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-xs">${ans ? escapeHtml(String(ans).trim()) : '<i class="text-slate-400">(Tidak diisi)</i>'
             }</p>
                 </div>
             `
         )
         .join('');
     } else {
-      jawabanHtml = `<p class="p-3 bg-white rounded-xl border text-slate-800 font-medium whitespace-pre-wrap text-xs">${String(
+      jawabanHtml = `<p class="p-3 bg-white rounded-xl border text-slate-800 font-medium whitespace-pre-wrap text-xs">${escapeHtml(String(
         parsedJawaban
-      )}</p>`;
+      ))}</p>`;
     }
   } else if (sub.tipe_sub === 'evaluasi') {
     if (typeof parsedJawaban === 'object' && parsedJawaban !== null) {
@@ -1670,17 +1670,17 @@ export function openKoreksiModal(idSub) {
             return `
                     <div class="p-3 bg-white rounded-xl border border-slate-200 space-y-1.5">
                         <div class="flex items-start justify-between gap-2 border-b pb-1">
-                            <span class="font-bold text-slate-800 text-xs">#${idx + 1}. ${qText}</span>
+                            <span class="font-bold text-slate-800 text-xs">#${idx + 1}. ${escapeHtml(qText)}</span>
                             ${kunci
                 ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
                 }">
-                                ${isCorrect ? '✅ Benar' : '❌ Salah'} (Kunci: ${kunci})
+                                ${isCorrect ? '✅ Benar' : '❌ Salah'} (Kunci: ${escapeHtml(kunci)})
                             </span>`
                 : ''
               }
                         </div>
                         <p class="text-xs font-bold ${isCorrect ? 'text-emerald-600' : 'text-red-600'}">
-                            Pilihan Jawaban Siswa: <span class="uppercase border px-2 py-0.5 rounded bg-slate-50">${userAns || '-'
+                            Pilihan Jawaban Siswa: <span class="uppercase border px-2 py-0.5 rounded bg-slate-50">${escapeHtml(userAns || '-')
               }</span>
                         </p>
                     </div>
@@ -1689,9 +1689,9 @@ export function openKoreksiModal(idSub) {
           .join('') +
         `</div>`;
     } else {
-      jawabanHtml = `<p class="p-3 bg-white rounded-xl border text-slate-800 font-medium text-xs">${String(
+      jawabanHtml = `<p class="p-3 bg-white rounded-xl border text-slate-800 font-medium text-xs">${escapeHtml(String(
         parsedJawaban
-      )}</p>`;
+      ))}</p>`;
     }
   } else if (sub.tipe_sub === 'game') {
     if (typeof parsedJawaban === 'object' && parsedJawaban !== null) {
@@ -1702,7 +1702,7 @@ export function openKoreksiModal(idSub) {
             (key, idx) => `
                 <div class="p-2.5 bg-white rounded-xl border border-slate-200 text-xs flex justify-between items-center">
                     <span class="font-bold text-slate-500">Item #${idx + 1}</span>
-                    <span class="font-bold text-purple-700 uppercase bg-purple-50 px-2 py-0.5 rounded border border-purple-200">${parsedJawaban[key]
+                    <span class="font-bold text-purple-700 uppercase bg-purple-50 px-2 py-0.5 rounded border border-purple-200">${escapeHtml(parsedJawaban[key])
               }</span>
                 </div>
             `
@@ -1710,12 +1710,12 @@ export function openKoreksiModal(idSub) {
           .join('') +
         `</div>`;
     } else {
-      jawabanHtml = `<p class="p-3 bg-white rounded-xl border text-slate-800 font-medium text-xs">${String(
+      jawabanHtml = `<p class="p-3 bg-white rounded-xl border text-slate-800 font-medium text-xs">${escapeHtml(String(
         parsedJawaban
-      )}</p>`;
+      ))}</p>`;
     }
   } else {
-    jawabanHtml = `<pre class="bg-white p-2.5 rounded-xl border text-[11px] font-mono text-slate-700 whitespace-pre-wrap">${sub.jawaban_json}</pre>`;
+    jawabanHtml = `<pre class="bg-white p-2.5 rounded-xl border text-[11px] font-mono text-slate-700 whitespace-pre-wrap">${escapeHtml(sub.jawaban_json)}</pre>`;
   }
 
   const body = document.getElementById('koreksi-detail-body');
@@ -1726,10 +1726,10 @@ export function openKoreksiModal(idSub) {
         ${jawabanHtml}
       </div>
     </div>
-    ${sub.canvas_image_base64
+    ${/^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(String(sub.canvas_image_base64 || ''))
       ? `<div class="p-3 bg-slate-50 border rounded-2xl">
             <span class="font-black text-brand-navy block mb-2">🎨 Sketsa Proyek STEAM</span>
-            <img src="${sub.canvas_image_base64}" onerror="this.onerror=null; this.src='https://placehold.co/600x300?text=Gagal+Memuat+Gambar';" class="max-h-60 rounded-xl border mx-auto bg-white object-contain shadow-xs" />
+            <img src="${escapeHtml(sub.canvas_image_base64)}" onerror="this.onerror=null; this.src='https://placehold.co/600x300?text=Gagal+Memuat+Gambar';" class="max-h-60 rounded-xl border mx-auto bg-white object-contain shadow-xs" />
           </div>`
       : ''
     }

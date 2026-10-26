@@ -2,6 +2,7 @@ import { requireStudentAuth } from '../components/modal.js';
 import { apiPost } from '../services/api.js';
 import { state } from '../state.js';
 import { switchView } from '../components/drawer.js';
+import { escapeHtml as e, jsArg, safeUrl } from '../services/html.js';
 
 let evalTimerInterval = null;
 let activeEvalCtx = null;
@@ -88,7 +89,7 @@ export function renderEvaluasiView(ptmId) {
         <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center text-3xl font-black mx-auto shadow-inner">✅</div>
         <div>
           <span class="px-3 py-1 bg-emerald-100 text-emerald-800 font-extrabold rounded-full text-[10px] uppercase">Evaluasi Selesai</span>
-          <h3 class="text-lg sm:text-xl font-black font-heading text-brand-navy mt-2">${evalObj.judul_evaluasi}</h3>
+          <h3 class="text-lg sm:text-xl font-black font-heading text-brand-navy mt-2">${e(evalObj.judul_evaluasi)}</h3>
           <p class="text-slate-500 mt-1">Kamu telah menyelesaikan pengerjaan kuis ini.</p>
         </div>
 
@@ -118,7 +119,7 @@ export function renderEvaluasiView(ptmId) {
         <div class="w-16 h-16 bg-blue-100 text-brand-blue rounded-3xl flex items-center justify-center text-3xl font-black mx-auto shadow-inner">⏱️</div>
         <div>
           <span class="px-3 py-1 bg-blue-50 text-brand-blue border border-blue-200 font-bold rounded-full text-[10px]">Konfirmasi Pengerjaan</span>
-          <h3 class="text-lg sm:text-xl font-black font-heading text-brand-navy mt-2">${evalObj.judul_evaluasi}</h3>
+          <h3 class="text-lg sm:text-xl font-black font-heading text-brand-navy mt-2">${e(evalObj.judul_evaluasi)}</h3>
           <p class="text-slate-500 mt-1">Siapkan diri kamu dengan baik sebelum memulai pengerjaan kuis evaluasi ini.</p>
         </div>
 
@@ -141,7 +142,7 @@ export function renderEvaluasiView(ptmId) {
           <p>• Pengisian hanya diperbolehkan <b>1 (satu) kali</b> untuk setiap siswa.</p>
         </div>
 
-        <button onclick="startEvaluasiQuiz('${ptmId}', '${evalObj.id_evaluasi}')" class="w-full py-4 bg-brand-emerald hover:bg-emerald-600 text-white font-black text-sm rounded-2xl shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2">
+        <button onclick="startEvaluasiQuiz(${jsArg(ptmId)}, ${jsArg(evalObj.id_evaluasi)})" class="w-full py-4 bg-brand-emerald hover:bg-emerald-600 text-white font-black text-sm rounded-2xl shadow-lg transition transform active:scale-95 flex items-center justify-center gap-2">
           <span>🚀 Mulai Mengerjakan Kuis Sekarang</span>
         </button>
       </div>
@@ -166,7 +167,7 @@ export function renderEvaluasiView(ptmId) {
       <div id="eval-timer-bar" class="sticky top-16 z-30 bg-brand-navy text-white p-4 rounded-2xl shadow-md flex items-center justify-between gap-3 transition-colors duration-300 border border-slate-700">
         <div class="min-w-0 flex-1">
           <span class="text-[9px] font-bold text-slate-300 uppercase tracking-wider block">KUIS EVALUASI AKTIF</span>
-          <h3 class="text-xs sm:text-sm font-black font-heading truncate">${evalObj.judul_evaluasi}</h3>
+          <h3 class="text-xs sm:text-sm font-black font-heading truncate">${e(evalObj.judul_evaluasi)}</h3>
           <span id="eval-progress" class="text-[11px] font-bold text-slate-200 block mt-0.5">${answeredNow} / ${soalList.length} soal terjawab</span>
           <div class="h-1 bg-white/20 rounded-full mt-1.5 overflow-hidden">
             <div id="eval-progress-bar" class="h-full bg-brand-yellow transition-all duration-300" style="width:${Math.round((answeredNow / soalList.length) * 100)}%"></div>
@@ -182,12 +183,12 @@ export function renderEvaluasiView(ptmId) {
         ${soalList
       .map(
         (s, idx) => `
-              <div id="eval-q-${s.id_soal}" class="bg-white p-5 rounded-3xl border space-y-3 shadow-xs">
+              <div id="eval-q-${e(s.id_soal)}" class="bg-white p-5 rounded-3xl border space-y-3 shadow-xs">
                 <div class="flex items-center justify-between border-b pb-2">
                   <span class="font-black text-brand-navy text-xs">Soal #${idx + 1}</span>
                   <span class="text-[10px] text-slate-400 font-bold">Pilihan Ganda</span>
                 </div>
-                <p class="font-bold text-slate-800 text-xs sm:text-sm leading-relaxed">${s.pertanyaan}</p>
+                <p class="font-bold text-slate-800 text-xs sm:text-sm leading-relaxed">${e(s.pertanyaan)}</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                   ${['A', 'B', 'C', 'D']
             .filter((o) => String(s['opsi_' + o.toLowerCase()] ?? '').trim() !== '')
@@ -195,13 +196,13 @@ export function renderEvaluasiView(ptmId) {
               (o) => {
                 const isSelected = state.evaluasiAnswers[s.id_soal] === o;
                 return `
-                        <button id="eval-opt-${s.id_soal}-${o}" aria-pressed="${isSelected}" onclick="selectEvalOption('${s.id_soal}', '${o}')" class="w-full p-3 text-left rounded-2xl border transition flex items-center gap-2.5 ${isSelected
+                        <button id="eval-opt-${e(s.id_soal)}-${o}" aria-pressed="${isSelected}" onclick="selectEvalOption(${jsArg(s.id_soal)}, '${o}')" class="w-full p-3 text-left rounded-2xl border transition flex items-center gap-2.5 ${isSelected
                     ? 'border-2 border-brand-blue bg-blue-50 font-bold text-brand-blue'
                     : 'border-slate-200 bg-white hover:bg-slate-50 font-medium text-slate-700'
                   }">
                           <span class="w-6 h-6 rounded-xl font-black text-[10px] flex items-center justify-center border shrink-0 ${isSelected ? 'bg-brand-blue text-white border-brand-blue' : 'bg-slate-100 text-slate-600 border-slate-200'
                   }">${o}</span>
-                          <span class="leading-snug">${s['opsi_' + o.toLowerCase()]}</span>
+                          <span class="leading-snug">${e(s['opsi_' + o.toLowerCase()])}</span>
                         </button>
                       `;
               }
@@ -214,7 +215,7 @@ export function renderEvaluasiView(ptmId) {
       .join('')}
       </div>
 
-      <button id="btn-submit-eval-siswa" onclick="konfirmasiKirimEvaluasi('${ptmId}', '${evalObj.id_evaluasi}')" class="w-full py-4 bg-brand-emerald text-white font-black text-xs sm:text-sm rounded-2xl shadow-lg hover:bg-emerald-600 transition">
+      <button id="btn-submit-eval-siswa" onclick="konfirmasiKirimEvaluasi(${jsArg(ptmId)}, ${jsArg(evalObj.id_evaluasi)})" class="w-full py-4 bg-brand-emerald text-white font-black text-xs sm:text-sm rounded-2xl shadow-lg hover:bg-emerald-600 transition">
         🚀 Kirim Jawaban Evaluasi & Hitung Skor
       </button>
     </div>

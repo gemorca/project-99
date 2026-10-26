@@ -2,6 +2,7 @@ import { clearStandaloneCanvas, downloadSteamCanvasImage, setStandaloneCanvasCol
 import { requireStudentAuth, showLoading, showToast } from '../components/modal.js';
 import { apiPost, fetchAllInitialData } from '../services/api.js';
 import { state } from '../state.js';
+import { escapeHtml as e } from '../services/html.js';
 
 export function renderRuangSteamView() {
   const userKelas = state.currentUser?.kelas || 'ALL';
@@ -24,7 +25,7 @@ export function renderRuangSteamView() {
   const optionsHtml =
     pertemuanList.length > 0
       ? pertemuanList
-        .map((p) => `<option value="${p.id_pertemuan}">Pertemuan ${p.nomor_pertemuan}: ${p.judul_pertemuan}</option>`)
+        .map((p) => `<option value="${e(p.id_pertemuan)}">Pertemuan ${e(p.nomor_pertemuan)}: ${e(p.judul_pertemuan)}</option>`)
         .join('')
       : '<option value="">-- Belum ada pertemuan STEAM aktif --</option>';
 
@@ -63,7 +64,7 @@ export function renderRuangSteamView() {
             <span class="font-bold text-white block">Capaian & Fokus Topik:</span>
             <p id="steam-pertemuan-deskripsi" class="text-slate-300 font-medium mt-0.5">
               ${defaultPtm
-      ? defaultPtm.deskripsi || 'Silakan pilih modul pertemuan di samping.'
+      ? e(defaultPtm.deskripsi || 'Silakan pilih modul pertemuan di samping.')
       : 'Belum ada modul STEAM aktif yang tersedia.'
     }
             </p>
@@ -201,8 +202,8 @@ export async function submitSteamLabToTeacher() {
         <div class="text-xs text-slate-600 space-y-2 mt-2">
           <p>${res.queued ? 'Karya tersimpan di perangkat dan dikirim otomatis ke guru saat koneksi tersedia.' : 'Karya proyek dan sketsa canvas kamu telah berhasil diterima oleh guru.'}</p>
           <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl font-bold text-emerald-800 text-left">
-            📌 <b>Judul:</b> ${title}<br>
-            👤 <b>Siswa:</b> ${state.currentUser.name} (${state.currentUser.kelas})
+            📌 <b>Judul:</b> ${e(title)}<br>
+            👤 <b>Siswa:</b> ${e(state.currentUser.name)} (${e(state.currentUser.kelas)})
           </div>
         </div>
       `,

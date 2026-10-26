@@ -3,13 +3,14 @@ import { CACHE_KEY } from '../config.js';
 import { apiPost } from '../services/api.js';
 import { playClick, playError, playSuccess, playWarning } from './sound.js';
 import { clearSessionState, saveSessionState, state } from '../state.js';
+import { escapeHtml, safeUrl } from '../services/html.js';
 
 export function showToast(icon, title) {
   Swal.fire({
     toast: true,
     position: 'top-end',
     icon: icon,
-    title: title,
+    title: escapeHtml(title),
     showConfirmButton: false,
     timer: 2500,
     timerProgressBar: true
@@ -41,7 +42,7 @@ export function showConfirm(title, text, confirmCallback, confirmBtnText = 'Ya, 
 
 export function showLoading(title = 'Memproses data...') {
   Swal.fire({
-    title: title,
+    title: escapeHtml(title),
     allowOutsideClick: false,
     didOpen: () => {
       Swal.showLoading();
@@ -65,9 +66,14 @@ export function togglePasswordVisibility(inputId, btnElem) {
 }
 
 export function openPdfFullscreen(url, title = 'Dokumen PDF') {
+  const safe = safeUrl(url);
+  if (!safe) {
+    showToast('error', 'Alamat dokumen tidak valid.');
+    return;
+  }
   document.getElementById('pdf-fullscreen-title').textContent = title;
-  document.getElementById('pdf-fullscreen-iframe').src = url;
-  document.getElementById('pdf-fullscreen-external-link').href = url.replace('/preview', '/view');
+  document.getElementById('pdf-fullscreen-iframe').src = safe;
+  document.getElementById('pdf-fullscreen-external-link').href = safe.replace('/preview', '/view');
   const modal = document.getElementById('pdf-fullscreen-modal');
   modal.classList.remove('hidden');
   modal.classList.add('flex');
@@ -114,6 +120,26 @@ export function setButtonLoading(btn, isLoading, loadText = 'Menyimpan...', orig
   }
 }
 
+function migrateGuestDrafts(username) {
+  try {
+    const prefix = `${CACHE_KEY}_DRAFT_`;
+    const suffix = '_guest';
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(prefix) && k.endsWith(suffix)) keys.push(k);
+    }
+    keys.forEach((k) => {
+      const target = k.slice(0, -'guest'.length) + username;
+      const val = localStorage.getItem(k);
+      if (val && !localStorage.getItem(target)) localStorage.setItem(target, val);
+      localStorage.removeItem(k);
+    });
+  } catch (err) {
+    console.warn('Gagal memindahkan draft tamu:', err);
+  }
+}
+
 export async function handleLoginSubmit(e) {
   e.preventDefault();
   const unElem = document.getElementById('login-username');
@@ -127,21 +153,11 @@ export async function handleLoginSubmit(e) {
   setButtonLoading(btn, false, '', 'Masuk');
 
   if (res.success) {
-    const previousGuestUser = 'guest';
     state.currentUser = res.user;
     state.lastActivity = Date.now();
     saveSessionState();
 
-    if (state.activePertemuanId) {
-      const guestDraftKey = `${CACHE_KEY}_DRAFT_${state.activePertemuanId}_${previousGuestUser}`;
-      const userDraftKey = `${CACHE_KEY}_DRAFT_${state.activePertemuanId}_${res.user.username}`;
-      const savedDraft = localStorage.getItem(guestDraftKey);
-
-      if (savedDraft && !localStorage.getItem(userDraftKey)) {
-        localStorage.setItem(userDraftKey, savedDraft);
-        localStorage.removeItem(guestDraftKey);
-      }
-    }
+    migrateGuestDrafts(res.user.username);
 
     closeLoginModal();
     if (unElem) unElem.value = '';

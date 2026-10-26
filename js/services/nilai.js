@@ -7,13 +7,7 @@ const TIPE_LABEL = {
   evaluasi: 'Evaluasi'
 };
 
-export function escapeHtml(value) {
-  return String(value === null || value === undefined ? '' : value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+export { escapeHtml } from './html.js';
 
 function terisi(v) {
   return v !== '' && v !== null && v !== undefined;

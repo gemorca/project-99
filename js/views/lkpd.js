@@ -3,6 +3,7 @@ import { markDraftForClear } from '../services/outbox-status.js';
 import { CACHE_KEY } from '../config.js';
 import { apiPost, fetchAllInitialData } from '../services/api.js';
 import { state } from '../state.js';
+import { escapeHtml as e, jsArg, safeUrl } from '../services/html.js';
 
 export function getYoutubeEmbedUrl(url) {
   if (!url || typeof url !== 'string') return '';
@@ -31,9 +32,11 @@ export function renderLkpdView(ptmId) {
   } catch (e) {
     questions = [];
   }
+  if (!Array.isArray(questions)) questions = [];
 
   const questionCount = Math.max(questions.length, 1);
   const isiTeks = lkpdObj.isi_teks || '';
+  const pdfUrl = safeUrl(lkpdObj.file_pdf_url);
   const hasPdfOverlay = Boolean(lkpdObj.peta_field_json && lkpdObj.file_pdf_url);
   const isPdfLkpd = lkpdObj.tipe_lkpd === 'pdf_interaktif' || Boolean(lkpdObj.file_pdf_url);
   const videoEmbedUrl = getYoutubeEmbedUrl(lkpdObj.video_url || '');
@@ -42,12 +45,12 @@ export function renderLkpdView(ptmId) {
     <div class="max-w-4xl mx-auto space-y-4 text-xs">
       <div class="bg-white p-5 rounded-3xl border shadow-sm space-y-3">
         <div class="flex items-center justify-between border-b pb-2">
-          <h3 class="font-black text-brand-navy text-sm font-heading">${lkpdObj.judul_lkpd}</h3>
+          <h3 class="font-black text-brand-navy text-sm font-heading">${e(lkpdObj.judul_lkpd)}</h3>
           <span class="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-0.5 rounded-full font-bold">
             ${isPdfLkpd ? 'Form PDF Interaktif Overlay' : 'Modul LKPD Manual Teks'}
           </span>
         </div>
-        <p class="text-slate-600 font-medium leading-relaxed">${lkpdObj.instruksi}</p>
+        <p class="text-slate-600 font-medium leading-relaxed">${e(lkpdObj.instruksi)}</p>
       </div>
 
       ${videoEmbedUrl
@@ -81,10 +84,10 @@ export function renderLkpdView(ptmId) {
           <p class="text-amber-700 font-medium leading-relaxed text-xs">
             Dokumen PDF LKPD sudah diunggah, namun area isian interaktif belum dipetakan oleh guru.
           </p>
-          ${lkpdObj.file_pdf_url
+          ${pdfUrl
           ? `
             <div class="bg-slate-900 rounded-2xl overflow-hidden h-[500px] border mt-2">
-              <iframe src="${lkpdObj.file_pdf_url}" class="w-full h-full border-0" allow="fullscreen"></iframe>
+              <iframe src="${e(pdfUrl)}" class="w-full h-full border-0" allow="fullscreen"></iframe>
             </div>
           `
           : ''
@@ -99,7 +102,7 @@ export function renderLkpdView(ptmId) {
         <div class="bg-white p-5 rounded-3xl border shadow-sm space-y-3">
           <h4 class="font-black text-brand-navy border-b pb-2">Material Teks LKPD</h4>
           <div class="prose max-w-none text-slate-800 leading-relaxed font-medium bg-slate-50 p-4 rounded-2xl border whitespace-pre-line text-xs">
-            ${isiTeks}
+            ${e(isiTeks)}
           </div>
         </div>
       `
@@ -115,18 +118,18 @@ export function renderLkpdView(ptmId) {
           .map(
             (q, idx) => `
           <div class="space-y-1.5 p-3 rounded-2xl bg-slate-50 border">
-            <label class="block font-bold text-slate-800">${idx + 1}. ${q}</label>
-            <textarea id="lkpd-ans-${idx}" oninput="saveLkpdDraft('${ptmId}', ${questionCount})" rows="3" class="w-full p-3 rounded-xl border bg-white text-xs" placeholder="Tuliskan jawaban kamu..."></textarea>
+            <label class="block font-bold text-slate-800">${idx + 1}. ${e(q)}</label>
+            <textarea id="lkpd-ans-${idx}" oninput="saveLkpdDraft(${jsArg(ptmId)}, ${questionCount})" rows="3" class="w-full p-3 rounded-xl border bg-white text-xs" placeholder="Tuliskan jawaban kamu..."></textarea>
           </div>
         `
           )
           .join('')
         : `
-          <textarea id="lkpd-ans-0" oninput="saveLkpdDraft('${ptmId}', ${questionCount})" rows="6" class="w-full p-3 rounded-xl border bg-white text-xs" placeholder="Tuliskan jawaban lengkap kamu..."></textarea>
+          <textarea id="lkpd-ans-0" oninput="saveLkpdDraft(${jsArg(ptmId)}, ${questionCount})" rows="6" class="w-full p-3 rounded-xl border bg-white text-xs" placeholder="Tuliskan jawaban lengkap kamu..."></textarea>
         `
       }
       </div>
-      <button id="btn-submit-lkpd-siswa" onclick="requireStudentAuth(() => submitLkpdSiswa('${ptmId}', '${lkpdObj.id_lkpd}', ${questionCount}))" class="w-full py-3.5 bg-brand-emerald text-white font-black rounded-2xl shadow hover:bg-emerald-600 transition">
+      <button id="btn-submit-lkpd-siswa" onclick="requireStudentAuth(() => submitLkpdSiswa(${jsArg(ptmId)}, ${jsArg(lkpdObj.id_lkpd)}, ${questionCount}))" class="w-full py-3.5 bg-brand-emerald text-white font-black rounded-2xl shadow hover:bg-emerald-600 transition">
         Kirim Jawaban LKPD Manual
       </button>
       `

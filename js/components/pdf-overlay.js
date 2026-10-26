@@ -4,6 +4,31 @@ import { CACHE_KEY } from '../config.js';
 import { apiPost } from '../services/api.js';
 import { fetchPdfArrayBuffer } from '../services/ocr.js';
 import { state, uiState } from '../state.js';
+import { escapeHtml as e, jsArg } from '../services/html.js';
+
+function activeRoot() {
+  const fs = document.getElementById('lkpd-fullscreen-modal');
+  if (fs && !fs.classList.contains('hidden')) return document.getElementById('lkpd-fullscreen-content') || fs;
+  return document.getElementById('desktop-lkpd-pages') || document;
+}
+
+function readAnswers(root) {
+  const out = {};
+  (root || document).querySelectorAll('.lkpd-fill-input').forEach((el) => {
+    if (el.dataset.fieldId) out[el.dataset.fieldId] = el.value;
+  });
+  return out;
+}
+
+async function fetchServerAnswers(idLkpd, user) {
+  if (!user || !user.username || user.username === 'guest') return {};
+  try {
+    const res = await apiPost({ action: 'get_jawaban_lkpd_isian', id_lkpd: idLkpd, username_siswa: user.username });
+    return res && res.success && res.jawaban ? res.jawaban : {};
+  } catch (err) {
+    return {};
+  }
+}
 
 export {
   openModalPetakanFieldGuru,
@@ -32,13 +57,7 @@ export async function renderLkpdUntukSiswa(containerEl, lkpdObj, ptmId) {
     const arrayBuffer = await fetchPdfArrayBuffer(lkpdObj.file_pdf_url, lkpdObj.file_drive_id);
     const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-    const jawabanRes = await apiPost({
-      action: 'get_jawaban_lkpd_isian',
-      id_lkpd: lkpdObj.id_lkpd,
-      username_siswa: user.username
-    });
-
-    const savedServerAnswers = jawabanRes.success && jawabanRes.jawaban ? jawabanRes.jawaban : {};
+    const savedServerAnswers = await fetchServerAnswers(lkpdObj.id_lkpd, user);
     const localDraft = getLkpdOverlayDraft(lkpdObj.id_lkpd);
     const combinedAnswers = { ...savedServerAnswers, ...localDraft };
 
@@ -55,7 +74,7 @@ export async function renderLkpdUntukSiswa(containerEl, lkpdObj, ptmId) {
           <p class="text-[11px] text-slate-600 font-medium max-w-xs mx-auto">
             Buka mode layar penuh untuk kenyamanan membaca dan mengetik jawaban di layar HP kamu.
           </p>
-          <button onclick="openLkpdFullscreenModal('${ptmId}', '${lkpdObj.id_lkpd}')" class="w-full px-5 py-3.5 bg-brand-purple hover:bg-purple-700 text-white font-black rounded-2xl shadow-md transition flex items-center justify-center gap-2 text-xs">
+          <button onclick="openLkpdFullscreenModal(${jsArg(ptmId)}, ${jsArg(lkpdObj.id_lkpd)})" class="w-full px-5 py-3.5 bg-brand-purple hover:bg-purple-700 text-white font-black rounded-2xl shadow-md transition flex items-center justify-center gap-2 text-xs">
             <span>🖥️ Buka Layar Penuh (Fullscreen)</span>
           </button>
         </div>
@@ -77,7 +96,7 @@ export async function renderLkpdUntukSiswa(containerEl, lkpdObj, ptmId) {
 
     const btnSaveDesktop = document.getElementById('btn-simpan-jawaban-lkpd-desktop');
     if (btnSaveDesktop) {
-      btnSaveDesktop.onclick = () => submitJawabanLkpdIsian(ptmId, lkpdObj.id_lkpd);
+      btnSaveDesktop.onclick = () => submitJawabanLkpdIsian(ptmId, lkpdObj.id_lkpd, btnSaveDesktop);
     }
 
     if (Object.keys(localDraft).length > 0) {
@@ -85,7 +104,7 @@ export async function renderLkpdUntukSiswa(containerEl, lkpdObj, ptmId) {
     }
   } catch (err) {
     console.error('Error rendering student PDF overlay:', err);
-    containerEl.innerHTML = `<div class="p-4 text-center text-red-500 font-bold text-xs">Gagal memuat PDF Interaktif (${err.message})</div>`;
+    containerEl.innerHTML = `<div class="p-4 text-center text-red-500 font-bold text-xs">Gagal memuat PDF Interaktif (${e(err.message)})</div>`;
   }
 }
 
@@ -154,7 +173,7 @@ export async function renderLkpdInlineContainer(containerEl, pdfDoc, fieldMap, s
       <p class="text-[11px] text-slate-600 font-medium max-w-sm mx-auto">
         Klik tombol di bawah ini untuk membuka lembar pengerjaan layar penuh (Fullscreen) yang nyaman dan pas di layar HP.
       </p>
-      <button onclick="openLkpdFullscreenModal('${ptmId}', '${idLkpd}')" class="w-full sm:w-auto px-6 py-3.5 bg-brand-purple hover:bg-purple-700 text-white font-black rounded-2xl shadow-lg transition inline-flex items-center justify-center gap-2 text-xs">
+      <button onclick="openLkpdFullscreenModal(${jsArg(ptmId)}, ${jsArg(idLkpd)})" class="w-full sm:w-auto px-6 py-3.5 bg-brand-purple hover:bg-purple-700 text-white font-black rounded-2xl shadow-lg transition inline-flex items-center justify-center gap-2 text-xs">
         <span>Buka Layar Penuh (Fullscreen)</span>
       </button>
     </div>
@@ -174,24 +193,32 @@ export async function openLkpdFullscreenModal(ptmId, idLkpd) {
   modal.classList.remove('hidden');
   modal.classList.add('flex');
 
-  document.getElementById('btn-floating-save-lkpd').onclick = () => submitJawabanLkpdIsian(ptmId, idLkpd);
+  const floatBtn = document.getElementById('btn-floating-save-lkpd');
+  if (floatBtn) floatBtn.onclick = (ev) => submitJawabanLkpdIsian(ptmId, idLkpd, ev.currentTarget);
 
-  if (uiState.currentActiveLkpdContext.pdfDoc && uiState.currentActiveLkpdContext.idLkpd === idLkpd) {
+  // seed isian dari desktop (belum tersimpan) sebelum layar penuh digambar
+  const desktopVals = readAnswers(document.getElementById('desktop-lkpd-pages'));
+  if (uiState.currentActiveLkpdContext && String(uiState.currentActiveLkpdContext.idLkpd) === String(idLkpd) && Object.keys(desktopVals).length) {
+    uiState.currentActiveLkpdContext.savedAnswers = { ...uiState.currentActiveLkpdContext.savedAnswers, ...desktopVals };
+  }
+
+  if (uiState.currentActiveLkpdContext.pdfDoc && String(uiState.currentActiveLkpdContext.idLkpd) === String(idLkpd)) {
     await drawLkpdFullscreenPages(contentWrap);
   } else {
     contentWrap.innerHTML = `<div class="p-8 text-white font-bold text-xs">Memuat PDF...</div>`;
     const user = state.currentUser || { username: 'guest' };
-    const fieldMap = JSON.parse(lkpdObj.peta_field_json);
-    const arrayBuffer = await fetchPdfArrayBuffer(lkpdObj.file_pdf_url, lkpdObj.file_drive_id);
-    const pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fieldMap;
+    let pdfDoc;
+    try {
+      fieldMap = JSON.parse(lkpdObj.peta_field_json);
+      const arrayBuffer = await fetchPdfArrayBuffer(lkpdObj.file_pdf_url, lkpdObj.file_drive_id);
+      pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    } catch (err) {
+      contentWrap.innerHTML = `<div class="p-8 text-white font-bold text-xs">Gagal memuat PDF (${e(err.message)})</div>`;
+      return;
+    }
 
-    const jawabanRes = await apiPost({
-      action: 'get_jawaban_lkpd_isian',
-      id_lkpd: lkpdObj.id_lkpd,
-      username_siswa: user.username
-    });
-
-    const savedServerAnswers = jawabanRes.success && jawabanRes.jawaban ? jawabanRes.jawaban : {};
+    const savedServerAnswers = await fetchServerAnswers(lkpdObj.id_lkpd, user);
     const localDraft = getLkpdOverlayDraft(idLkpd);
     const combinedAnswers = { ...savedServerAnswers, ...localDraft };
 
@@ -202,6 +229,16 @@ export async function openLkpdFullscreenModal(ptmId, idLkpd) {
 
 export function closeLkpdFullscreenModal() {
   const modal = document.getElementById('lkpd-fullscreen-modal');
+  const fsVals = readAnswers(document.getElementById('lkpd-fullscreen-content'));
+  if (Object.keys(fsVals).length) {
+    document.querySelectorAll('#desktop-lkpd-pages .lkpd-fill-input').forEach((el) => {
+      const v = fsVals[el.dataset.fieldId];
+      if (v !== undefined) el.value = v;
+    });
+    if (uiState.currentActiveLkpdContext) {
+      uiState.currentActiveLkpdContext.savedAnswers = { ...uiState.currentActiveLkpdContext.savedAnswers, ...fsVals };
+    }
+  }
   modal.classList.add('hidden');
   modal.classList.remove('flex');
 }
@@ -210,6 +247,7 @@ export async function drawLkpdFullscreenPages(containerEl) {
   const { pdfDoc, fieldMap, savedAnswers, idLkpd } = uiState.currentActiveLkpdContext;
   if (!pdfDoc || !fieldMap) return;
 
+  const prevVals = readAnswers(containerEl);
   containerEl.innerHTML = '';
   const scrollBody = document.getElementById('lkpd-fullscreen-scroll-body');
   const viewportWidth = scrollBody.clientWidth - 24;
@@ -251,8 +289,7 @@ export async function drawLkpdFullscreenPages(containerEl) {
       el.placeholder = f.label || f.id;
       el.title = f.label || f.id;
 
-      const currentVal = document.querySelector(`.lkpd-fill-input[data-field-id="${f.id}"]`)?.value;
-      el.value = currentVal !== undefined ? currentVal : (savedAnswers[f.id] || '');
+      el.value = prevVals[f.id] !== undefined ? prevVals[f.id] : (savedAnswers[f.id] || '');
 
       el.oninput = () => saveLkpdOverlayDraft(idLkpd);
 
@@ -292,22 +329,18 @@ export function changeLkpdZoom(delta) {
   if (contentWrap) drawLkpdFullscreenPages(contentWrap);
 }
 
-export async function submitJawabanLkpdIsian(ptmId, idLkpd) {
+export async function submitJawabanLkpdIsian(ptmId, idLkpd, btnEl) {
   const user = state.currentUser;
   if (!user) {
     requireStudentAuth();
     return;
   }
 
-  const jawaban = {};
-  document.querySelectorAll('.lkpd-fill-input').forEach((el) => {
-    if (el.dataset.fieldId) {
-      jawaban[el.dataset.fieldId] = el.value;
-    }
-  });
+  const jawaban = readAnswers(activeRoot());
 
-  const btn = document.getElementById('btn-simpan-jawaban-lkpd');
-  setButtonLoading(btn, true, '🚀 Mengirim...', '💾 Simpan Jawaban LKPD Overlay');
+  const btn = btnEl || document.getElementById('btn-simpan-jawaban-lkpd-desktop');
+  const origText = btn ? btn.innerHTML : '💾 Simpan Jawaban LKPD Overlay';
+  setButtonLoading(btn, true, '🚀 Mengirim...', origText);
 
   const res = await apiPost({
     action: 'submit_lkpd_isian',
@@ -319,7 +352,7 @@ export async function submitJawabanLkpdIsian(ptmId, idLkpd) {
     jawaban_json: JSON.stringify(jawaban)
   });
 
-  setButtonLoading(btn, false, '', '💾 Simpan Jawaban LKPD Overlay');
+  setButtonLoading(btn, false, '', origText);
 
   if (res.success) {
     if (res.queued) {
@@ -336,13 +369,12 @@ export async function submitJawabanLkpdIsian(ptmId, idLkpd) {
 export function saveLkpdOverlayDraft(idLkpd) {
   const username = state.currentUser ? state.currentUser.username : 'guest';
   const draftKey = `${CACHE_KEY}_DRAFT_OVERLAY_${idLkpd}_${username}`;
-  const jawaban = {};
-  document.querySelectorAll('.lkpd-fill-input').forEach((el) => {
-    if (el.dataset.fieldId) {
-      jawaban[el.dataset.fieldId] = el.value;
-    }
-  });
-  localStorage.setItem(draftKey, JSON.stringify({ jawaban, timestamp: new Date().toISOString() }));
+  const jawaban = readAnswers(activeRoot());
+  try {
+    localStorage.setItem(draftKey, JSON.stringify({ jawaban, timestamp: new Date().toISOString() }));
+  } catch (err) {
+    console.warn('Draft overlay tidak tersimpan:', err);
+  }
 }
 
 export function getLkpdOverlayDraft(idLkpd) {
@@ -363,7 +395,7 @@ export function getLkpdOverlayDraft(idLkpd) {
 export function clearLkpdOverlayDraft(idLkpd) {
   const username = state.currentUser ? state.currentUser.username : 'guest';
   const draftKey = `${CACHE_KEY}_DRAFT_OVERLAY_${idLkpd}_${username}`;
-  localStorage.removeItem(draftKey);
+  try { localStorage.removeItem(draftKey); } catch (err) { /* abaikan */ }
 }
 
 window.openLkpdFullscreenModal = openLkpdFullscreenModal;

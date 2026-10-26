@@ -2,6 +2,7 @@ import { switchView } from '../components/drawer.js';
 import { closeLoading, setButtonLoading, showConfirm, showLoading, showToast } from '../components/modal.js';
 import { apiPost, fetchAllInitialData } from '../services/api.js';
 import { state } from '../state.js';
+import { escapeHtml as e, jsArg, safeUrl } from '../services/html.js';
 
 export function renderAdminUsersView(container) {
   const usersList = state.cachedData.users || [];
@@ -27,19 +28,19 @@ export function renderAdminUsersView(container) {
       .map(
         (u) => `
               <tr>
-                <td class="p-3 font-bold whitespace-nowrap">${u.nama_lengkap}</td>
-                <td class="p-3 font-mono">${u.username}</td>
+                <td class="p-3 font-bold whitespace-nowrap">${e(u.nama_lengkap)}</td>
+                <td class="p-3 font-mono">${e(u.username)}</td>
                 <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${u.role === 'admin'
             ? 'bg-red-100 text-red-700'
             : u.role === 'guru'
               ? 'bg-purple-100 text-purple-700'
               : 'bg-blue-100 text-blue-700'
-          }">${String(u.role).toUpperCase()}</span></td>
-                <td class="p-3 font-bold">${u.kelas || '-'}</td>
+          }">${e(String(u.role).toUpperCase())}</span></td>
+                <td class="p-3 font-bold">${e(u.kelas || '-')}</td>
                 <td class="p-3 text-center whitespace-nowrap">
                   <div class="flex items-center justify-center gap-1.5">
-                    <button onclick="openUserModal('${u.user_id}')" class="px-3 py-1 bg-amber-100 text-amber-800 font-bold rounded-lg hover:bg-amber-200 transition">Edit</button>
-                    <button onclick="deleteUser('${u.user_id}')" class="px-3 py-1 bg-red-100 text-red-700 font-bold rounded-lg hover:bg-red-200 transition">Hapus</button>
+                    <button onclick="openUserModal(${jsArg(u.user_id)})" class="px-3 py-1 bg-amber-100 text-amber-800 font-bold rounded-lg hover:bg-amber-200 transition">Edit</button>
+                    <button onclick="deleteUser(${jsArg(u.user_id)})" class="px-3 py-1 bg-red-100 text-red-700 font-bold rounded-lg hover:bg-red-200 transition">Hapus</button>
                   </div>
                 </td>
               </tr>
@@ -67,14 +68,13 @@ export function renderAdminClassesView(container) {
         (k) => `
           <div class="bg-white p-4 rounded-3xl border flex items-center justify-between gap-2 shadow-xs">
             <div>
-              <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full">Tingkat ${k.tingkat || '-'
-          }</span>
-              <h4 class="font-black text-brand-navy text-sm mt-1">${k.nama_kelas}</h4>
-              <p class="text-slate-500 text-[11px]">${k.keterangan || ''}</p>
+              <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-bold text-[10px] rounded-full">Tingkat ${e(k.tingkat || '-')}</span>
+              <h4 class="font-black text-brand-navy text-sm mt-1">${e(k.nama_kelas)}</h4>
+              <p class="text-slate-500 text-[11px]">${e(k.keterangan || '')}</p>
             </div>
             <div class="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
-              <button onclick="openKelasModal('${k.id_kelas}')" class="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg font-bold hover:bg-amber-200 transition">Edit</button>
-              <button onclick="deleteKelas('${k.id_kelas}')" class="px-3 py-1 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition">Hapus</button>
+              <button onclick="openKelasModal(${jsArg(k.id_kelas)})" class="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg font-bold hover:bg-amber-200 transition">Edit</button>
+              <button onclick="deleteKelas(${jsArg(k.id_kelas)})" class="px-3 py-1 bg-red-100 text-red-700 rounded-lg font-bold hover:bg-red-200 transition">Hapus</button>
             </div>
           </div>
         `
@@ -247,7 +247,7 @@ export function populateKelasSelects() {
   const kelasList = state.cachedData.kelas || [];
   const optionsHtml =
     '<option value="-">- (Khusus Guru/Admin)</option>' +
-    kelasList.map((k) => `<option value="${k.nama_kelas}">${k.nama_kelas}</option>`).join('');
+    kelasList.map((k) => `<option value="${e(k.nama_kelas)}">${e(k.nama_kelas)}</option>`).join('');
 
   const userKelasSel = document.getElementById('user-form-kelas');
   if (userKelasSel) userKelasSel.innerHTML = optionsHtml;
@@ -256,7 +256,7 @@ export function populateKelasSelects() {
   if (ptmKelasSel)
     ptmKelasSel.innerHTML =
       '<option value="ALL">Semua Kelas</option>' +
-      kelasList.map((k) => `<option value="${k.nama_kelas}">${k.nama_kelas}</option>`).join('');
+      kelasList.map((k) => `<option value="${e(k.nama_kelas)}">${e(k.nama_kelas)}</option>`).join('');
 }
 
 window.openUserModal = openUserModal;

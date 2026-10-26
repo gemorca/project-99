@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v12';
+const CACHE_VERSION = 'v13';
 const SHELL_CACHE = `elkpd-steam-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `elkpd-steam-runtime-${CACHE_VERSION}`;
 const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxJ7zWwSJKMP0R8Et-nthmtw4Ff8fceEfPz0qwAii6pzwVJLfHpUN4qvaYvY-Gp6baKJg/exec';
@@ -36,6 +36,7 @@ const SHELL_ASSETS = [
     './js/services/detectors/merger.js',
     './js/services/ocr-labels.js',
     './js/services/nilai.js',
+    './js/services/html.js',
     './js/services/idb.js',
     './js/services/outbox-status.js',
     './js/services/pwa-install.js',

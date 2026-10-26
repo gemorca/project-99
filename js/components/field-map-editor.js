@@ -1,3 +1,4 @@
+import { jsArg } from '../services/html.js';
 import { setButtonLoading, showToast } from './modal.js';
 import { apiPost, fetchAllInitialData } from '../services/api.js';
 import { fetchPdfArrayBuffer } from '../services/ocr.js';
@@ -820,19 +821,19 @@ export function renderGuruFieldListPanel() {
       <div class="flex items-center justify-between gap-1">
         <span class="font-bold text-slate-800 text-[11px] font-mono truncate">${esc(f.id)}${f.auto ? ' <span class="px-1 rounded bg-amber-100 text-amber-800 text-[9px]">AUTO</span>' : ''}</span>
         <span class="shrink-0 flex items-center gap-2">
-          ${f.auto ? `<button onclick="acceptGuruField('${f.id}')" class="text-emerald-600 font-bold text-[10px] hover:underline">Terima</button>` : ''}
-          <button onclick="duplicateGuruField('${f.id}')" class="text-blue-600 font-bold text-[10px] hover:underline">Duplikat</button>
-          <button onclick="deleteGuruField('${f.id}')" class="text-red-500 font-bold text-[10px] hover:underline">Hapus</button>
+          ${f.auto ? `<button onclick="acceptGuruField(${jsArg(f.id)})" class="text-emerald-600 font-bold text-[10px] hover:underline">Terima</button>` : ''}
+          <button onclick="duplicateGuruField(${jsArg(f.id)})" class="text-blue-600 font-bold text-[10px] hover:underline">Duplikat</button>
+          <button onclick="deleteGuruField(${jsArg(f.id)})" class="text-red-500 font-bold text-[10px] hover:underline">Hapus</button>
         </span>
       </div>
       <div class="space-y-1">
         <div class="flex items-center gap-1">
           <label class="text-[10px] text-slate-500 font-medium shrink-0 w-10">Label:</label>
-          <input type="text" value="${esc(f.label || f.id)}" onchange="changeGuruFieldLabel('${f.id}', this.value)" placeholder="Label field..." class="w-full p-1 text-[11px] border rounded-lg font-bold bg-slate-50 text-brand-navy" />
+          <input type="text" value="${esc(f.label || f.id)}" onchange="changeGuruFieldLabel(${jsArg(f.id)}, this.value)" placeholder="Label field..." class="w-full p-1 text-[11px] border rounded-lg font-bold bg-slate-50 text-brand-navy" />
         </div>
         <div class="flex items-center gap-1">
           <label class="text-[10px] text-slate-500 font-medium shrink-0 w-10">Tipe:</label>
-          <select onchange="changeGuruFieldType('${f.id}', this.value)" class="w-full p-1 text-[11px] border rounded-lg font-bold bg-slate-50">
+          <select onchange="changeGuruFieldType(${jsArg(f.id)}, this.value)" class="w-full p-1 text-[11px] border rounded-lg font-bold bg-slate-50">
             <option value="text" ${f.type === 'text' ? 'selected' : ''}>Input Teks Singkat</option>
             <option value="textarea" ${f.type === 'textarea' ? 'selected' : ''}>Textarea Paragraf</option>
           </select>

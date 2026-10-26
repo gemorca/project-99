@@ -12,6 +12,7 @@ import { loadLkpdDraft, renderLkpdView } from '../views/lkpd.js';
 import { renderMateriView } from '../views/materi.js';
 import { renderRuangSteamView, updateSteamPertemuanInfo } from '../views/steam-lab.js';
 import { state, saveSessionState } from '../state.js';
+import { escapeHtml as e } from '../services/html.js';
 
 export function toggleDrawer(isOpen) {
   const drawer = document.getElementById('main-drawer');
@@ -88,7 +89,7 @@ export function renderSiswaNav(container) {
       groupWrapper.className = 'space-y-1 bg-slate-900/60 p-2 rounded-2xl border border-slate-800/80';
       groupWrapper.innerHTML = `
         <div class="font-bold text-brand-yellow text-[11px] px-2 py-1 uppercase font-heading">
-          Pertemuan ${ptm.nomor_pertemuan}: ${ptm.judul_pertemuan}
+          Pertemuan ${e(ptm.nomor_pertemuan)}: ${e(ptm.judul_pertemuan)}
         </div>
       `;
 
@@ -203,6 +204,7 @@ export async function switchView(viewId, paramId = null) {
   if (!state.isDataLoaded) {
     viewport.innerHTML = `<div class="p-8 text-center text-xs font-bold text-slate-500">Memuat data dari database...</div>`;
     await fetchAllInitialData();
+    if (!state.isDataLoaded) return;
   }
 
   renderSidebarNav();
