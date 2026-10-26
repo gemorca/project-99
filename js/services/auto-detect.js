@@ -9,6 +9,7 @@
  * Detektor terpasang:
  *  - Tahap 2: 'dotted-lines' (garis titik-titik dan garis isian abu-abu), lihat detectors/dotted-lines.js
  *  - Tahap 3: 'table-cells' (sel tabel kosong dan kotak jawaban), lihat detectors/table-cells.js
+ *  - Tahap 5: gabung garis bertumpuk jadi textarea, buang tumpang tindih, lihat detectors/merger.js
  *  - Tahap 4: pelabelan via OCR (opts.ocr = worker dari createLabelWorker), lihat detectors/labeler.js
  *
  * Kontrak detektor:
@@ -20,6 +21,7 @@
 import { dottedLinesDetector, detectDottedLines } from './detectors/dotted-lines.js';
 import { tableCellsDetector } from './detectors/table-cells.js';
 import { assignLabels } from './detectors/labeler.js';
+import { mergeFields } from './detectors/merger.js';
 import { recognizeWords } from './ocr-labels.js';
 
 const DEBUG_KEY = 'ELKPD_DEBUG_DETECT';
@@ -156,7 +158,7 @@ export async function detectPage(pdfDoc, pageNum, opts = {}) {
         console.warn(`[auto-detect] OCR label gagal di halaman ${pageNum}:`, err);
       }
     }
-    return result;
+    return mergeFields(result, canvas.width, canvas.height); // Tahap 5: gabung garis, buang tumpang tindih
   } finally {
     releaseCanvas(canvas);
   }

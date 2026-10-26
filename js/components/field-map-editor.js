@@ -99,9 +99,11 @@ function buildModal() {
       <div class="flex flex-wrap items-center gap-2 text-xs">
         <button id="btn-autodetect-guru" onclick="runAutoDetectGuru()" class="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-xl shadow transition">🪄 Deteksi Otomatis</button>
         <button id="btn-accept-auto-guru" onclick="acceptAllAutoGuru()" class="hidden px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition">✅ Terima Semua Draf</button>
+        <button id="btn-accept-page-auto-guru" onclick="acceptPageAutoGuru()" class="hidden px-3 py-2 bg-white border border-emerald-600 text-emerald-700 font-bold rounded-xl transition">✔ Terima Halaman Ini</button>
         <button id="btn-clear-auto-guru" onclick="clearAutoGuru()" class="hidden px-3 py-2 bg-white border border-amber-500 text-amber-700 font-bold rounded-xl transition">🗑️ Hapus Draf Auto</button>
         <div id="guru-selection-bar" class="hidden items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-xl px-2 py-1">
           <span class="text-[11px] font-bold text-blue-900 max-w-[9rem] truncate">Terpilih: <span id="guru-sel-label"></span></span>
+          <button id="btn-accept-sel-guru" onclick="acceptGuruField()" class="hidden px-2 py-1.5 bg-emerald-600 text-white font-bold rounded-lg">✔ Terima</button>
           <button onclick="duplicateGuruField()" class="px-2 py-1.5 bg-white border font-bold rounded-lg">⧉ Duplikat</button>
           <button onclick="deleteGuruField()" class="px-2 py-1.5 bg-white border border-red-300 text-red-600 font-bold rounded-lg">🗑 Hapus</button>
         </div>
@@ -419,6 +421,8 @@ function updateSelectionBar() {
   const f = uiState.selectedFieldGuru ? findField(uiState.selectedFieldGuru) : null;
   if (f) {
     if (lbl) lbl.textContent = f.label || f.id;
+    const acc = document.getElementById('btn-accept-sel-guru');
+    if (acc) acc.classList.toggle('hidden', !f.auto);
     bar.classList.remove('hidden');
     bar.classList.add('flex');
   } else {
@@ -433,6 +437,8 @@ function updateAutoButtons() {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('hidden', !hasAuto);
   });
+  const pageEl = document.getElementById('btn-accept-page-auto-guru');
+  if (pageEl) pageEl.classList.toggle('hidden', !pageFields().some((f) => f.auto));
 }
 
 /* ------------------------------------------------------------------ */
@@ -842,6 +848,7 @@ export function renderGuruFieldListPanel() {
       <div class="flex items-center justify-between gap-1">
         <span class="font-bold text-slate-800 text-[11px] font-mono truncate">${esc(f.id)}${f.auto ? ' <span class="px-1 rounded bg-amber-100 text-amber-800 text-[9px]">AUTO</span>' : ''}</span>
         <span class="shrink-0 flex items-center gap-2">
+          ${f.auto ? `<button onclick="acceptGuruField('${f.id}')" class="text-emerald-600 font-bold text-[10px] hover:underline">Terima</button>` : ''}
           <button onclick="duplicateGuruField('${f.id}')" class="text-blue-600 font-bold text-[10px] hover:underline">Duplikat</button>
           <button onclick="deleteGuruField('${f.id}')" class="text-red-500 font-bold text-[10px] hover:underline">Hapus</button>
         </span>
@@ -1002,6 +1009,27 @@ export async function runAutoDetectGuru() {
   );
 }
 
+export function acceptGuruField(fieldId) {
+  const f = findField(fieldId || uiState.selectedFieldGuru);
+  if (!f || !f.auto) return;
+  delete f.auto;
+  markDirty();
+  redrawGuruFieldBoxes();
+}
+
+export function acceptPageAutoGuru() {
+  let n = 0;
+  pageFields().forEach((f) => {
+    if (f.auto) {
+      delete f.auto;
+      n++;
+    }
+  });
+  if (n > 0) markDirty();
+  redrawGuruFieldBoxes();
+  showToast('success', `${n} draf halaman ini diterima.`);
+}
+
 export function acceptAllAutoGuru() {
   let n = 0;
   allFields().forEach((f) => {
@@ -1076,4 +1104,6 @@ window.toggleGuruMode = toggleGuruMode;
 window.toggleGuruFieldPanel = toggleGuruFieldPanel;
 window.runAutoDetectGuru = runAutoDetectGuru;
 window.acceptAllAutoGuru = acceptAllAutoGuru;
+window.acceptGuruField = acceptGuruField;
+window.acceptPageAutoGuru = acceptPageAutoGuru;
 window.clearAutoGuru = clearAutoGuru;
