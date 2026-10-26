@@ -7,7 +7,6 @@ import { state } from '../state.js';
 import { buildRekap, buildRingkasanSiswa, csvDetailSubmisi, csvRekapMatriks, escapeHtml, filterSiswa, filterSubmisi, getNilaiSubmisi, KOLOM_TIPE, labelModul, labelTipe, statistikKelas } from '../services/nilai.js';
 import { populateKelasSelects } from '../views/admin.js';
 
-
 const koreksiFilter = { q: '', kelas: '', ptm: '', pending: false };
 let koreksiDetailKey = null;
 
@@ -146,7 +145,6 @@ export function renderGuruSoalView(container) {
 
   container.innerHTML = `
     <div class="space-y-4 text-xs">
-      <!-- Header Action -->
       <div class="flex flex-wrap items-center justify-between gap-2 bg-white p-4 rounded-2xl border shadow-xs">
         <span class="font-bold text-slate-700">Bank Soal Evaluasi: <b>${soalList.length} Soal</b></span>
         <div class="flex items-center gap-2">
@@ -159,11 +157,10 @@ export function renderGuruSoalView(container) {
         </div>
       </div>
 
-      <!-- Daftar Modul Evaluasi Aktif & Durasinya -->
       <div class="space-y-2">
         <h4 class="font-black text-brand-navy text-xs font-heading">📌 Modul Evaluasi Per Pertemuan:</h4>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          ${evalList.length === 0 
+          ${evalList.length === 0
             ? `<div class="p-4 bg-white rounded-2xl border text-slate-400 italic">Belum ada modul evaluasi yang dibuat.</div>`
             : evalList.map((ev) => {
                 const ptmObj = ptmList.find((p) => String(p.id_pertemuan) === String(ev.id_pertemuan));
@@ -205,7 +202,6 @@ export function renderGuruSoalView(container) {
         </div>
       </div>
 
-      <!-- Bank Soal -->
       <div class="space-y-2 pt-2">
         <h4 class="font-black text-brand-navy text-xs font-heading">📝 Daftar Soal Pilihan Ganda:</h4>
         ${soalList.length === 0
