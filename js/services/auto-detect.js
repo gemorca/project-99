@@ -9,8 +9,7 @@
  * Detektor terpasang:
  *  - Tahap 2: 'dotted-lines' (garis titik-titik dan garis isian abu-abu), lihat detectors/dotted-lines.js
  *  - Tahap 3: 'table-cells' (sel tabel kosong dan kotak jawaban), lihat detectors/table-cells.js
- * Menyusul:
- *  - Tahap 4: pelabelan via OCR
+ *  - Tahap 4: pelabelan via OCR (opts.ocr = worker dari createLabelWorker), lihat detectors/labeler.js
  *
  * Kontrak detektor:
  *   async (ctx) => Array<{ x, y, w, h, type?, label? }>
@@ -20,6 +19,8 @@
 
 import { dottedLinesDetector, detectDottedLines } from './detectors/dotted-lines.js';
 import { tableCellsDetector } from './detectors/table-cells.js';
+import { assignLabels } from './detectors/labeler.js';
+import { recognizeWords } from './ocr-labels.js';
 
 const DEBUG_KEY = 'ELKPD_DEBUG_DETECT';
 const detectors = [];
@@ -146,7 +147,16 @@ export async function detectPage(pdfDoc, pageNum, opts = {}) {
         console.warn(`[auto-detect] detektor "${d.name}" gagal di halaman ${pageNum}:`, err);
       }
     }
-    return dropLinesInsideCells(normalizeDetections(all));
+    let result = dropLinesInsideCells(normalizeDetections(all));
+    if (opts.ocr && result.length) {
+      try {
+        const words = await recognizeWords(opts.ocr, canvas);
+        result = assignLabels(result, words, canvas.width, canvas.height);
+      } catch (err) {
+        console.warn(`[auto-detect] OCR label gagal di halaman ${pageNum}:`, err);
+      }
+    }
+    return result;
   } finally {
     releaseCanvas(canvas);
   }

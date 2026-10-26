@@ -2,6 +2,7 @@ import { setButtonLoading, showToast } from './modal.js';
 import { apiPost, fetchAllInitialData } from '../services/api.js';
 import { fetchPdfArrayBuffer } from '../services/ocr.js';
 import { detectPage, getDetectorCount } from '../services/auto-detect.js';
+import { createLabelWorker } from '../services/ocr-labels.js';
 import { state, uiState } from '../state.js';
 
 /* ------------------------------------------------------------------ */
@@ -933,12 +934,22 @@ export async function runAutoDetectGuru() {
   const found = {};
   let count = 0;
 
+  // OCR label (Tahap 4). Gagal memuat = lanjut tanpa label otomatis.
+  let ocr = null;
+  try {
+    showAutoProgress(0, 'Memuat OCR (bahasa Indonesia)...');
+    ocr = await createLabelWorker('ind');
+  } catch (err) {
+    console.warn('OCR tidak tersedia, label otomatis dilewati:', err);
+    showToast('info', 'OCR tidak tersedia. Kotak diberi label default.');
+  }
+
   try {
     for (let p = 1; p <= total; p++) {
       if (uiState.autoDetectCancelGuru) break;
-      showAutoProgress(((p - 1) / total) * 100, `Mendeteksi halaman ${p} / ${total}...`);
+      showAutoProgress(((p - 1) / total) * 100, `Mendeteksi${ocr ? ' + membaca label' : ''} halaman ${p} / ${total}...`);
       await new Promise((r) => setTimeout(r, 0)); // beri napas ke UI
-      found[p] = await detectPage(pdf, p);
+      found[p] = await detectPage(pdf, p, { ocr });
       count += found[p].length;
     }
   } catch (err) {
@@ -946,6 +957,8 @@ export async function runAutoDetectGuru() {
     uiState.autoDetectCancelGuru = true;
     Swal.fire({ icon: 'error', title: 'Deteksi gagal', text: err.message || String(err) });
   }
+
+  if (ocr) ocr.terminate().catch(() => {});
 
   const cancelled = uiState.autoDetectCancelGuru;
   const stillSameDoc = uiState.currentPdfDocGuru === pdf;
