@@ -1,4 +1,5 @@
-import { requireStudentAuth, setButtonLoading, showToast } from '../components/modal.js';
+import { requireStudentAuth, setButtonLoading, showToast, toastSubmitResult } from '../components/modal.js';
+import { markDraftForClear } from '../services/outbox-status.js';
 import { CACHE_KEY } from '../config.js';
 import { apiPost } from '../services/api.js';
 import { fetchPdfArrayBuffer } from '../services/ocr.js';
@@ -321,8 +322,12 @@ export async function submitJawabanLkpdIsian(ptmId, idLkpd) {
   setButtonLoading(btn, false, '', '💾 Simpan Jawaban LKPD Overlay');
 
   if (res.success) {
-    clearLkpdOverlayDraft(idLkpd);
-    showToast('success', 'Jawaban LKPD Overlay tersimpan!');
+    if (res.queued) {
+      markDraftForClear(`${CACHE_KEY}_DRAFT_OVERLAY_${idLkpd}_${user.username}`);
+    } else {
+      clearLkpdOverlayDraft(idLkpd);
+    }
+    toastSubmitResult(res, 'Jawaban LKPD Overlay tersimpan!');
   } else {
     Swal.fire({ icon: 'error', title: 'Gagal Menyimpan Jawaban', text: res.message });
   }

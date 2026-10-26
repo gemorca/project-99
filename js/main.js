@@ -1,6 +1,7 @@
 import './services/idb.js';
 import './services/sw-register.js';
 import './services/pwa-install.js';
+import './services/outbox-status.js';
 import './services/api.js';
 import './services/ocr.js';
 import './components/modal.js';

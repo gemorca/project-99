@@ -124,6 +124,7 @@
           </div>
 
           <div class="flex items-center gap-2">
+            <span id="outbox-badge" role="status" aria-live="polite" class="hidden px-3 py-1 bg-amber-100 border border-amber-300 text-amber-800 text-xs font-black rounded-xl"></span>
             <span id="role-badge" class="px-3 py-1 bg-slate-100 border border-slate-200 text-slate-700 text-xs font-black rounded-xl">
               Mode Tamu
             </span>
@@ -158,16 +159,16 @@
         <p class="text-xs text-slate-500">Masukkan username dan password kamu</p>
       </div>
 
-      <form onsubmit="handleLoginSubmit(event)" autocomplete="off" class="space-y-3 text-xs">
+      <form onsubmit="handleLoginSubmit(event)" class="space-y-3 text-xs">
         <div>
           <label class="block font-bold text-slate-700 mb-1">Username / NIS</label>
-          <input type="text" id="login-username" autocomplete="off" required placeholder="Masukkan Username / NIS" class="w-full p-3 rounded-xl border border-slate-300 font-bold focus:ring-2 focus:ring-brand-blue focus:outline-none" />
+          <input type="text" id="login-username" autocomplete="username" autocapitalize="none" spellcheck="false" required placeholder="Masukkan Username / NIS" class="w-full p-3 rounded-xl border border-slate-300 font-bold focus:ring-2 focus:ring-brand-blue focus:outline-none" />
         </div>
 
         <div>
           <label class="block font-bold text-slate-700 mb-1">Password</label>
           <div class="relative">
-            <input type="password" id="login-password" placeholder="Masukkan password" class="w-full p-2.5 pr-10 rounded-xl border border-slate-300 font-bold text-xs focus:ring-2 focus:ring-brand-blue focus:outline-none" required />
+            <input type="password" id="login-password" autocomplete="current-password" placeholder="Masukkan password" class="w-full p-2.5 pr-10 rounded-xl border border-slate-300 font-bold text-xs focus:ring-2 focus:ring-brand-blue focus:outline-none" required />
             <button type="button" id="btn-toggle-login-password" onclick="togglePasswordVisibility('login-password', this)" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-800 text-sm focus:outline-none p-1" title="Lihat Password">
               👁️
             </button>

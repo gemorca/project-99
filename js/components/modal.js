@@ -152,6 +152,26 @@ export async function handleLoginSubmit(e) {
     if (res.user.role === 'guru') switchView('guru-pertemuan');
     else if (res.user.role === 'admin') switchView('admin-users');
     else switchView('home');
+  } else {
+    playError();
+    if (pwElem) pwElem.value = '';
+    Swal.fire({
+      icon: 'error',
+      title: 'Login Gagal',
+      text: res.message || 'Periksa koneksi internet lalu coba lagi.',
+      confirmButtonText: 'Coba Lagi',
+      confirmButtonColor: '#0D6EFD'
+    }).then(() => {
+      if (pwElem) pwElem.focus();
+    });
+  }
+}
+
+export function toastSubmitResult(res, successText) {
+  if (res && res.queued) {
+    showToast('info', 'Tersimpan di perangkat. Dikirim otomatis ke server.');
+  } else {
+    showToast('success', successText);
   }
 }
 

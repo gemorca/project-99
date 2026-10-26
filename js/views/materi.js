@@ -1,5 +1,5 @@
 import { switchView } from '../components/drawer.js';
-import { openPdfFullscreen, requireStudentAuth, setButtonLoading, showToast } from '../components/modal.js';
+import { openPdfFullscreen, requireStudentAuth, setButtonLoading, showToast, toastSubmitResult } from '../components/modal.js';
 import { apiPost, fetchAllInitialData } from '../services/api.js';
 import { state } from '../state.js';
 
@@ -136,8 +136,23 @@ export async function submitReviewMateri(idMateri, ptmId) {
   setButtonLoading(btn, false, '', '💬 Kirim Ulasan');
 
   if (res.success) {
-    showToast('success', 'Ulasan berhasil dikirim!');
-    await fetchAllInitialData(true);
+    if (res.queued) {
+      state.cachedData.reviews = [
+        ...(state.cachedData.reviews || []),
+        {
+          id_review: 'LOCAL_' + Date.now(),
+          id_materi: idMateri,
+          username_siswa: state.currentUser.username,
+          nama_siswa: state.currentUser.name,
+          rating,
+          komentar,
+          timestamp: new Date().toISOString()
+        }
+      ];
+    } else {
+      await fetchAllInitialData(true);
+    }
+    toastSubmitResult(res, 'Ulasan berhasil dikirim!');
     switchView('materi-ptm', ptmId);
   } else {
     Swal.fire({ icon: 'error', title: 'Gagal Mengirim Ulasan', text: res.message });

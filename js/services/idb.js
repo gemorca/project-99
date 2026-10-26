@@ -40,11 +40,25 @@ export async function getIDBCache(key) {
 }
 
 export async function saveToOutboxQueue(id, payload) {
-  try {
-    const db = await initIndexedDB();
+  const db = await initIndexedDB();
+  await new Promise((resolve, reject) => {
     const tx = db.transaction('outbox', 'readwrite');
     tx.objectStore('outbox').put({ id, payload, timestamp: Date.now() });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error || new Error('Transaksi outbox dibatalkan'));
+  });
+}
+
+export async function countOutbox() {
+  try {
+    const db = await initIndexedDB();
+    return await new Promise((resolve) => {
+      const req = db.transaction('outbox', 'readonly').objectStore('outbox').count();
+      req.onsuccess = () => resolve(req.result || 0);
+      req.onerror = () => resolve(0);
+    });
   } catch (e) {
-    console.error('IDB Outbox Save Error:', e);
+    return 0;
   }
 }

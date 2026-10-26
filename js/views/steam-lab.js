@@ -193,13 +193,13 @@ export async function submitSteamLabToTeacher() {
   });
 
   if (res.success) {
-    await fetchAllInitialData(true);
+    if (!res.queued) await fetchAllInitialData(true);
     Swal.fire({
       icon: 'success',
-      title: 'Berhasil Terkirim! 🎉',
+      title: res.queued ? 'Tersimpan di Perangkat! 📥' : 'Berhasil Terkirim! 🎉',
       html: `
         <div class="text-xs text-slate-600 space-y-2 mt-2">
-          <p>Karya proyek dan sketsa canvas kamu telah berhasil diterima oleh guru.</p>
+          <p>${res.queued ? 'Karya tersimpan di perangkat dan dikirim otomatis ke guru saat koneksi tersedia.' : 'Karya proyek dan sketsa canvas kamu telah berhasil diterima oleh guru.'}</p>
           <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl font-bold text-emerald-800 text-left">
             📌 <b>Judul:</b> ${title}<br>
             👤 <b>Siswa:</b> ${state.currentUser.name} (${state.currentUser.kelas})

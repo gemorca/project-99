@@ -51,6 +51,7 @@ export async function triggerOutboxFlushManual() {
             delReq.onsuccess = resolveDel;
             delReq.onerror = resolveDel;
           });
+          window.dispatchEvent(new Event('outbox-changed'));
         }
       } catch (err) {
         console.warn('Manual Outbox Flush pending connection...', err);

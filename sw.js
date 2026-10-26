@@ -1,7 +1,7 @@
-const CACHE_VERSION = 'v10';
+const CACHE_VERSION = 'v11';
 const SHELL_CACHE = `elkpd-steam-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `elkpd-steam-runtime-${CACHE_VERSION}`;
-const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwdT3NG-OjarK8__bzrr1LAMWyFY5OT3Bv4KVjGUjF7V3UaMsiofZ1EDlHEaqhsSFaxCg/exec';
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwM5ZoQDpgpURwm3aVaK1GMJCKcs_04OkGPqzbHlO5tcz5pQt10vgaokyL1XmOk7ftx/exec';
 
 const SHELL_ASSETS = [
     './',
@@ -37,6 +37,7 @@ const SHELL_ASSETS = [
     './js/services/ocr-labels.js',
     './js/services/nilai.js',
     './js/services/idb.js',
+    './js/services/outbox-status.js',
     './js/services/pwa-install.js',
     './js/services/ocr.js',
     './js/services/sw-register.js',
@@ -159,6 +160,7 @@ async function processOutboxQueue() {
                     if (resJson && resJson.success) {
                         const delTx = db.transaction('outbox', 'readwrite');
                         delTx.objectStore('outbox').delete(item.id);
+                        delTx.oncomplete = notifyOutboxChanged;
                     }
                 } catch (err) {
                     console.warn('[SW Background Sync] Percobaan kirim gagal, akan dicoba otomatis nanti:', err);
@@ -168,4 +170,9 @@ async function processOutboxQueue() {
     } catch (err) {
         console.error('[SW Background Sync Error]:', err);
     }
+}
+function notifyOutboxChanged() {
+    self.clients.matchAll({ includeUncontrolled: true }).then((list) => {
+        list.forEach((client) => client.postMessage({ type: 'OUTBOX_CHANGED' }));
+    });
 }

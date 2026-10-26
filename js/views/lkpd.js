@@ -1,4 +1,5 @@
-import { requireStudentAuth, setButtonLoading, showToast } from '../components/modal.js';
+import { requireStudentAuth, setButtonLoading, showToast, toastSubmitResult } from '../components/modal.js';
+import { markDraftForClear } from '../services/outbox-status.js';
 import { CACHE_KEY } from '../config.js';
 import { apiPost, fetchAllInitialData } from '../services/api.js';
 import { state } from '../state.js';
@@ -193,9 +194,13 @@ export async function submitLkpdSiswa(ptmId, idLkpd, questionCount) {
 
   setButtonLoading(btn, false, '', 'Kirim Jawaban LKPD Manual');
   if (res.success) {
-    clearLkpdDraft(ptmId);
-    await fetchAllInitialData(true);
-    showToast('success', 'Jawaban LKPD Berhasil Terkirim!');
+    if (res.queued) {
+      markDraftForClear(`${CACHE_KEY}_DRAFT_${ptmId}_${user.username}`);
+    } else {
+      clearLkpdDraft(ptmId);
+      await fetchAllInitialData(true);
+    }
+    toastSubmitResult(res, 'Jawaban LKPD Berhasil Terkirim!');
   } else {
     Swal.fire({ icon: 'error', title: 'Gagal Mengirim', text: res.message });
   }

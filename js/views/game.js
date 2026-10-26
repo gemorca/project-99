@@ -372,11 +372,11 @@ export async function submitGameSiswa(ptmId, idGame, tipe) {
 
   setButtonLoading(btn, false, '', '🎮 Periksa & Simpan Skor Game');
   if (res.success) {
-    await fetchAllInitialData(true);
+    if (!res.queued) await fetchAllInitialData(true);
     Swal.fire({
       icon: 'success',
       title: 'Permainan Selesai!',
-      html: `Skor Kamu untuk <b>${gameObj.judul_game}</b>: <b class="text-2xl text-purple-600 block mt-1">${score} / 100</b>`
+      html: `Skor Kamu untuk <b>${gameObj.judul_game}</b>: <b class="text-2xl text-purple-600 block mt-1">${score} / 100</b>${res.queued ? '<span class="block text-xs text-slate-500 mt-2">Skor tersimpan di perangkat dan dikirim otomatis ke server.</span>' : ''}`
     });
   } else {
     Swal.fire({ icon: 'error', title: 'Gagal Menyimpan Skor', text: res.message });

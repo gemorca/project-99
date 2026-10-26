@@ -116,17 +116,28 @@ export async function apiPost(payload) {
   const isSubmissionAction = ['submit_lkpd', 'submit_game', 'submit_lkpd_isian', 'save_review'].includes(payload.action);
 
   if (isSubmissionAction) {
-    const queueId = 'QUEUE_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
-    
-    await saveToOutboxQueue(queueId, payload);
-    
+    const queueId = 'QUEUE_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+    try {
+      await saveToOutboxQueue(queueId, { ...payload, queue_id: queueId });
+    } catch (err) {
+      console.error('Gagal menyimpan ke outbox:', err);
+      return {
+        success: false,
+        message: 'Jawaban belum bisa disimpan di perangkat. Coba lagi, atau kosongkan ruang penyimpanan HP.'
+      };
+    }
+
+    window.dispatchEvent(new Event('outbox-changed'));
     registerServiceWorkerAndSync();
     triggerOutboxFlushManual();
 
     return {
       success: true,
-      message: '⚡ Tersimpan secara instan di perangkat! Mengirim ke server...',
-      instant: true
+      queued: true,
+      instant: true,
+      queue_id: queueId,
+      message: 'Tersimpan di perangkat. Dikirim otomatis ke server.'
     };
   }
 
