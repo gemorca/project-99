@@ -4,8 +4,12 @@ import { openModalPetakanFieldGuru } from '../components/pdf-overlay.js';
 import { collectHotspotItem, renderHotspotConfigForm, renderHotspotItemRow } from '../games/hotspot.js';
 import { apiPost, fetchAllInitialData, refreshSubmissionsData, saveToLocalStorage } from '../services/api.js';
 import { state } from '../state.js';
+import { buildRingkasanSiswa, escapeHtml, getNilaiSubmisi, labelModul, labelTipe } from '../services/nilai.js';
 import { populateKelasSelects } from '../views/admin.js';
 
+
+const koreksiFilter = { q: '', kelas: '', ptm: '', pending: false };
+let koreksiDetailKey = null;
 
 export function renderGuruPertemuanView(container) {
   const ptmList = state.cachedData.pertemuan || [];
@@ -240,56 +244,236 @@ export function renderGuruSoalView(container) {
 
 export function renderGuruKoreksiView(container) {
   const subs = state.cachedData.submissions || [];
+  const kelasList = Array.from(new Set(subs.map((s) => String(s.kelas || '').trim()).filter(Boolean))).sort();
+  const ptmList = (state.cachedData.pertemuan || [])
+    .slice()
+    .sort((a, b) => Number(a.nomor_pertemuan) - Number(b.nomor_pertemuan));
+  const inputCls = 'p-2.5 rounded-xl border border-slate-300 font-bold bg-white';
+
   container.innerHTML = `
     <div class="space-y-4 text-xs">
-      <div class="flex items-center justify-between bg-white p-4 rounded-2xl border shadow-xs">
-        <span class="font-bold text-slate-700">Total Jawaban Masuk: <b>${subs.length}</b></span>
+      <div class="flex flex-wrap items-center justify-between gap-2 bg-white p-4 rounded-2xl border shadow-xs">
+        <span id="koreksi-total" class="font-bold text-slate-700"></span>
         <button onclick="refreshSubmissionsData()" class="px-4 py-2 bg-brand-blue hover:bg-blue-600 text-white font-bold rounded-xl shadow transition flex items-center gap-1.5">
           <span>🔄</span> Refresh Data Submisi
         </button>
       </div>
+
+      <div class="bg-white p-4 rounded-2xl border shadow-xs grid grid-cols-2 lg:grid-cols-4 gap-2">
+        <input type="search" placeholder="Cari nama siswa..." value="${escapeHtml(koreksiFilter.q)}" oninput="setKoreksiFilter('q', this.value)" class="${inputCls} col-span-2 lg:col-span-1" />
+        <select onchange="setKoreksiFilter('kelas', this.value)" class="${inputCls}">
+          <option value="">Semua Kelas</option>
+          ${kelasList.map((k) => `<option value="${escapeHtml(k)}" ${koreksiFilter.kelas === k ? 'selected' : ''}>${escapeHtml(k)}</option>`).join('')}
+        </select>
+        <select onchange="setKoreksiFilter('ptm', this.value)" class="${inputCls}">
+          <option value="">Semua Pertemuan</option>
+          ${ptmList.map((p) => `<option value="${escapeHtml(p.id_pertemuan)}" ${koreksiFilter.ptm === String(p.id_pertemuan) ? 'selected' : ''}>Pertemuan ${escapeHtml(p.nomor_pertemuan)}</option>`).join('')}
+        </select>
+        <label class="${inputCls} flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" ${koreksiFilter.pending ? 'checked' : ''} onchange="setKoreksiFilter('pending', this.checked)" />
+          Belum dinilai saja
+        </label>
+      </div>
+
       <div class="bg-white p-5 rounded-3xl border shadow-sm">
-        <h3 class="font-black text-brand-navy text-sm font-heading border-b pb-2">📥 Jawaban Masuk Siswa (${subs.length})</h3>
+        <h3 class="font-black text-brand-navy text-sm font-heading border-b pb-2">📥 Nilai Siswa</h3>
         <div class="overflow-x-auto mt-3">
           <table class="w-full text-left">
             <thead class="bg-brand-navy text-white font-heading">
               <tr>
                 <th class="p-3">Siswa</th>
-                <th class="p-3">Tipe Modul</th>
-                <th class="p-3">Nilai</th>
+                <th class="p-3">Modul</th>
+                <th class="p-3 text-center">Rata-rata</th>
+                <th class="p-3">Nilai per Pertemuan</th>
                 <th class="p-3 text-center">Aksi</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
-              ${subs.length === 0
-                ? `<tr><td colspan="4" class="p-4 text-center text-slate-400">Belum ada jawaban siswa yang masuk.</td></tr>`
-                : subs
-                  .map((s) => {
-                    const scoreDisplay =
-                      s.nilai_esai !== '' && s.nilai_esai !== null && s.nilai_esai !== undefined
-                        ? s.nilai_esai
-                        : s.skor_otomatis !== '' && s.skor_otomatis !== null && s.skor_otomatis !== undefined
-                          ? s.skor_otomatis
-                          : 'Belum';
-                    return `
-                      <tr>
-                        <td class="p-3 font-bold">${s.nama_siswa} (${s.kelas})</td>
-                        <td class="p-3 font-mono uppercase">${s.tipe_sub}</td>
-                        <td class="p-3 font-bold text-brand-blue">${scoreDisplay}</td>
-                        <td class="p-3 text-center">
-                          <button onclick="openKoreksiModal('${s.id_sub}')" class="px-3 py-1 bg-brand-blue text-white font-bold rounded-lg">Periksa</button>
-                        </td>
-                      </tr>
-                    `;
-                  })
-                  .join('')
-              }
-            </tbody>
+            <tbody id="koreksi-list-body" class="divide-y divide-slate-100"></tbody>
           </table>
         </div>
       </div>
     </div>
   `;
+
+  renderKoreksiList();
+}
+
+function getKoreksiRingkasan() {
+  let subs = state.cachedData.submissions || [];
+  if (koreksiFilter.ptm) subs = subs.filter((s) => String(s.id_pertemuan || '').trim() === koreksiFilter.ptm);
+  if (koreksiFilter.kelas) subs = subs.filter((s) => String(s.kelas || '').trim() === koreksiFilter.kelas);
+
+  let list = buildRingkasanSiswa(subs);
+  const q = koreksiFilter.q.trim().toLowerCase();
+  if (q) list = list.filter((r) => r.nama.toLowerCase().includes(q) || r.username.toLowerCase().includes(q));
+  if (koreksiFilter.pending) list = list.filter((r) => r.pending > 0);
+  return list;
+}
+
+function nilaiBadge(nilai) {
+  return nilai === null
+    ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">Belum dinilai</span>'
+    : `<span class="font-black text-brand-blue">${nilai}</span>`;
+}
+
+export function renderKoreksiList() {
+  const body = document.getElementById('koreksi-list-body');
+  if (!body) return;
+
+  const list = getKoreksiRingkasan();
+  const totalSub = list.reduce((n, r) => n + r.subs.length, 0);
+  const totalPending = list.reduce((n, r) => n + r.pending, 0);
+  const total = document.getElementById('koreksi-total');
+  if (total) {
+    total.innerHTML = `Siswa: <b>${list.length}</b> &nbsp;|&nbsp; Submisi: <b>${totalSub}</b> &nbsp;|&nbsp; Belum dinilai: <b>${totalPending}</b>`;
+  }
+
+  if (list.length === 0) {
+    body.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">Tidak ada data siswa yang sesuai.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = list
+    .map((r) => {
+      const modulLabel = r.counted.length === 1 ? labelTipe(r.counted[0].tipe_sub) : `${r.counted.length} modul`;
+      const pendingBadge = r.pending > 0
+        ? `<span class="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">${r.pending} belum dinilai</span>`
+        : '';
+      const chips = r.perPertemuan
+        .map((p) => `<span class="inline-block mr-1 mb-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">${escapeHtml(p.singkat)}: ${p.rata === null ? '-' : p.rata}</span>`)
+        .join('');
+
+      return `
+        <tr>
+          <td class="p-3"><span class="font-bold">${escapeHtml(r.nama)}</span><span class="block text-[10px] text-slate-500">${escapeHtml(r.kelas)}</span></td>
+          <td class="p-3 font-mono uppercase">${escapeHtml(modulLabel)}${pendingBadge}</td>
+          <td class="p-3 text-center">${nilaiBadge(r.rata)}</td>
+          <td class="p-3">${chips || '-'}</td>
+          <td class="p-3 text-center">
+            <button onclick="openKoreksiSiswaModal('${encodeURIComponent(r.key)}')" class="px-3 py-1 bg-brand-blue text-white font-bold rounded-lg">Detail</button>
+          </td>
+        </tr>
+      `;
+    })
+    .join('');
+}
+
+export function setKoreksiFilter(key, value) {
+  koreksiFilter[key] = key === 'pending' ? Boolean(value) : String(value);
+  renderKoreksiList();
+}
+
+export function openKoreksiSiswaModal(encodedKey) {
+  koreksiDetailKey = decodeURIComponent(encodedKey);
+  renderKoreksiSiswaModal();
+}
+
+function renderKoreksiSiswaModal() {
+  const r = buildRingkasanSiswa(state.cachedData.submissions || []).find((x) => x.key === koreksiDetailKey);
+  if (!r) {
+    closeKoreksiSiswaModal();
+    return;
+  }
+
+  let modal = document.getElementById('koreksi-siswa-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'koreksi-siswa-modal';
+    modal.className = 'fixed inset-0 bg-slate-950/80 backdrop-blur-xs z-40 hidden items-center justify-center p-4';
+    document.body.appendChild(modal);
+  }
+
+  const grupHtml = r.perPertemuan
+    .map((p) => {
+      const rows = p.subs
+        .map((s) => {
+          const nilai = getNilaiSubmisi(s);
+          const dihitung = r.hitung.has(String(s.id_sub));
+          const waktuStr = s.timestamp ? new Date(s.timestamp).toLocaleString('id-ID') : '-';
+          return `
+            <div class="p-3 bg-white rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-2 ${dihitung ? '' : 'opacity-60'}">
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 font-mono font-bold text-[10px] uppercase">${escapeHtml(labelTipe(s.tipe_sub))}</span>
+                  <span class="font-bold text-slate-800">${escapeHtml(labelModul(s))}</span>
+                  ${dihitung ? '' : '<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold">percobaan lama, tidak dihitung</span>'}
+                </div>
+                <span class="block text-[10px] text-slate-400 mt-0.5">${escapeHtml(waktuStr)} · ${escapeHtml(s.status || '-')}</span>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                ${nilaiBadge(nilai)}
+                <button onclick="openKoreksiModal('${escapeHtml(s.id_sub)}')" class="px-3 py-1 bg-brand-blue text-white font-bold rounded-lg">Periksa</button>
+                <button onclick="deleteSubmisi('${escapeHtml(s.id_sub)}')" class="px-3 py-1 bg-red-100 text-red-700 font-bold rounded-lg hover:bg-red-200 transition">Hapus</button>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+
+      return `
+        <div class="space-y-2">
+          <div class="flex items-center justify-between border-b pb-1">
+            <span class="font-black text-brand-navy">📌 ${escapeHtml(p.label)}${p.judul ? ` - ${escapeHtml(p.judul)}` : ''}</span>
+            <span class="font-bold text-slate-600">Nilai pertemuan: ${nilaiBadge(p.rata)}</span>
+          </div>
+          ${rows}
+        </div>
+      `;
+    })
+    .join('');
+
+  modal.innerHTML = `
+    <div class="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto text-xs">
+      <div class="flex items-start justify-between pb-3 border-b gap-3">
+        <div>
+          <h3 class="text-base font-black text-brand-navy font-heading">👤 ${escapeHtml(r.nama)}</h3>
+          <p class="text-[11px] text-slate-500 font-bold mt-0.5">${escapeHtml(r.kelas)} · ${r.counted.length} modul · ${r.subs.length} submisi</p>
+        </div>
+        <div class="text-right shrink-0">
+          <span class="block text-[10px] font-bold text-slate-500">Rata-rata semua modul</span>
+          <span class="text-xl font-black">${nilaiBadge(r.rata)}</span>
+        </div>
+        <button onclick="closeKoreksiSiswaModal()" class="text-slate-400 font-bold text-xl hover:text-slate-700">&times;</button>
+      </div>
+      <div class="space-y-4">${grupHtml}</div>
+    </div>
+  `;
+
+  modal.classList.remove('hidden');
+  modal.classList.add('flex');
+}
+
+export function closeKoreksiSiswaModal() {
+  koreksiDetailKey = null;
+  const modal = document.getElementById('koreksi-siswa-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+}
+
+export function deleteSubmisi(idSub) {
+  const sub = (state.cachedData.submissions || []).find((s) => String(s.id_sub) === String(idSub));
+  if (!sub) return;
+
+  const tambahan = String(sub.tipe_sub || '').toLowerCase() === 'evaluasi' ? ' Siswa dapat mengerjakan evaluasi ini lagi.' : '';
+  showConfirm(
+    'Hapus Submisi?',
+    `Jawaban ${labelTipe(sub.tipe_sub)} milik ${sub.nama_siswa || 'siswa'} dihapus permanen.${tambahan}`,
+    async () => {
+      showLoading('Menghapus submisi...');
+      const res = await apiPost({ action: 'delete_submisi', id_sub: idSub });
+      closeLoading();
+      if (res.success) {
+        showToast('success', res.message);
+        await fetchAllInitialData(true);
+        switchView('guru-koreksi');
+        if (koreksiDetailKey) renderKoreksiSiswaModal();
+      } else {
+        Swal.fire({ icon: 'error', title: 'Gagal Menghapus Submisi', text: res.message });
+      }
+    }
+  );
 }
 
 export function openEvaluasiModal(idEvaluasi = null) {
@@ -1476,6 +1660,7 @@ export async function handleGradeSubmit(e) {
     showToast('success', res.message);
     await fetchAllInitialData(true);
     switchView('guru-koreksi');
+    if (koreksiDetailKey) renderKoreksiSiswaModal();
   } else {
     Swal.fire({ icon: 'error', title: 'Gagal Menyimpan Penilaian', text: res.message });
   }
@@ -1509,6 +1694,10 @@ window.deleteSoal = deleteSoal;
 window.openKoreksiModal = openKoreksiModal;
 window.closeKoreksiModal = closeKoreksiModal;
 window.handleGradeSubmit = handleGradeSubmit;
+window.setKoreksiFilter = setKoreksiFilter;
+window.openKoreksiSiswaModal = openKoreksiSiswaModal;
+window.closeKoreksiSiswaModal = closeKoreksiSiswaModal;
+window.deleteSubmisi = deleteSubmisi;
 window.openEvaluasiModal = openEvaluasiModal;
 window.deleteEvaluasi = deleteEvaluasi;
 window.closeEvaluasiModal = closeEvaluasiModal;
