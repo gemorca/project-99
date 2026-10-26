@@ -5,17 +5,11 @@ import { detectPage, getDetectorCount } from '../services/auto-detect.js';
 import { createLabelWorker } from '../services/ocr-labels.js';
 import { state, uiState } from '../state.js';
 
-/* ------------------------------------------------------------------ */
-/* Konstanta & helper                                                  */
-/* ------------------------------------------------------------------ */
-const MIN_W_PCT = 2; // lebar minimum kotak saat resize (% halaman)
-const MIN_H_PCT = 1.2; // tinggi minimum kotak saat resize (% halaman)
+const MIN_W_PCT = 2;
+const MIN_H_PCT = 1.2;
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2.5;
 const ZOOM_STEP = 0.25;
-// Skala simpan tetap. JANGAN simpan skala hasil perangkat guru: sisi siswa (desktop)
-// memakai nilai ini sebagai batas atas. Skala dari HP (~0.55) akan membuat halaman
-// siswa di laptop tampil kecil.
 const SAVED_RENDER_SCALE = 1.4;
 
 const isCoarse = () => !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
@@ -30,7 +24,7 @@ const esc = (s) =>
 let renderToken = 0;
 let renderQueue = Promise.resolve();
 let currentRenderTask = null;
-let activeOp = null; // operasi pointer yang sedang berjalan (draw/move/resize/tap)
+let activeOp = null;
 let keyListenerAttached = false;
 
 function pageFields(page = uiState.currentPageGuru) {
@@ -63,9 +57,6 @@ function ensureUiDefaults() {
   if (uiState.autoDetectCancelGuru === undefined) uiState.autoDetectCancelGuru = false;
 }
 
-/* ------------------------------------------------------------------ */
-/* Modal                                                               */
-/* ------------------------------------------------------------------ */
 function buildModal() {
   const modal = document.createElement('div');
   modal.id = 'lkpd-field-map-modal';
@@ -167,7 +158,6 @@ export function openModalPetakanFieldGuru(idLkpd) {
     await fetchAllInitialData(true);
   };
 
-  // reset state sesi editor
   uiState.modeGuru = isCoarse() ? 'pan' : 'draw';
   uiState.zoomGuru = 1;
   uiState.selectedFieldGuru = null;
@@ -211,9 +201,6 @@ export function closeModalPetakanFieldGuru(force = false) {
   modal.classList.remove('flex');
 }
 
-/* ------------------------------------------------------------------ */
-/* Muat PDF & render halaman                                           */
-/* ------------------------------------------------------------------ */
 export async function openFieldMapEditorGuru(containerEl, pdfUrl, existingFieldMapJson, fileDriveId = null) {
   ensureUiDefaults();
   try {
@@ -248,7 +235,6 @@ export async function openFieldMapEditorGuru(containerEl, pdfUrl, existingFieldM
     const firstPage = await uiState.currentPdfDocGuru.getPage(1);
     const natural = firstPage.getViewport({ scale: 1 });
     const availableWidth = Math.max(containerEl.clientWidth - (isCoarse() ? 16 : 32), 240);
-    // Skala dasar "pas lebar". Zoom pengguna = pengali di atas skala ini.
     uiState.renderScaleGuru = clamp(availableWidth / natural.width, 0.3, 2.5);
 
     containerEl.innerHTML = `
@@ -283,7 +269,7 @@ export function renderGuruPage() {
   }
 
   const run = async () => {
-    if (myToken !== renderToken) return; // sudah ada permintaan render yang lebih baru
+    if (myToken !== renderToken) return;
     const pdf = uiState.currentPdfDocGuru;
     const canvas = document.getElementById('guru-pdf-canvas');
     const wrap = document.getElementById('guru-page-wrap');
@@ -371,9 +357,6 @@ export function zoomGuruFit() {
   return applyZoom(1);
 }
 
-/* ------------------------------------------------------------------ */
-/* Mode & UI kecil                                                     */
-/* ------------------------------------------------------------------ */
 export function toggleGuruMode() {
   uiState.modeGuru = uiState.modeGuru === 'draw' ? 'pan' : 'draw';
   updateModeUI();
@@ -441,9 +424,6 @@ function updateAutoButtons() {
   if (pageEl) pageEl.classList.toggle('hidden', !pageFields().some((f) => f.auto));
 }
 
-/* ------------------------------------------------------------------ */
-/* Interaksi pointer: gambar, geser, ubah ukuran                       */
-/* ------------------------------------------------------------------ */
 function pctFromEvent(e, rect) {
   return {
     x: ((e.clientX - rect.left) / rect.width) * 100,
@@ -517,7 +497,6 @@ export function attachGuruPointerHandlers() {
       return;
     }
 
-    // Mode gulir: area kosong hanya dipantau untuk "ketuk = batal pilih". Tanpa capture agar browser bebas menggulir.
     activeOp = { ...base, type: 'tap' };
   };
 
@@ -620,7 +599,6 @@ export function attachGuruPointerHandlers() {
   overlay.onpointercancel = (e) => finish(e, true);
 }
 
-// Nama lama dipertahankan agar kompatibel dengan kode yang mungkin masih memanggilnya.
 export const attachGuruDrawHandlers = attachGuruPointerHandlers;
 
 function onGuruKeyDown(e) {
@@ -656,9 +634,6 @@ function onGuruKeyDown(e) {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/* CRUD field                                                          */
-/* ------------------------------------------------------------------ */
 function addGuruField({ x, y, w, h, type = 'text', label = '', auto = false }) {
   const n = uiState.fieldCounterGuru++;
   const field = {
@@ -735,9 +710,6 @@ export function changeGuruFieldType(fieldId, newType) {
   }
 }
 
-/* ------------------------------------------------------------------ */
-/* Gambar kotak & panel daftar                                         */
-/* ------------------------------------------------------------------ */
 export function redrawGuruFieldBoxes() {
   const overlay = document.getElementById('guru-overlay');
   if (!overlay) return;
@@ -879,9 +851,6 @@ export function renderGuruFieldListPanel() {
   if (selItem && selItem.scrollIntoView) selItem.scrollIntoView({ block: 'nearest' });
 }
 
-/* ------------------------------------------------------------------ */
-/* Deteksi otomatis (Tahap 1: kerangka)                                */
-/* ------------------------------------------------------------------ */
 function showAutoProgress(pct, text) {
   const wrap = document.getElementById('guru-autodetect-progress');
   const bar = document.getElementById('guru-autodetect-bar');
@@ -941,7 +910,6 @@ export async function runAutoDetectGuru() {
   const found = {};
   let count = 0;
 
-  // OCR label (Tahap 4). Gagal memuat = lanjut tanpa label otomatis.
   let ocr = null;
   try {
     showAutoProgress(0, 'Memuat OCR (bahasa Indonesia)...');
@@ -955,7 +923,7 @@ export async function runAutoDetectGuru() {
     for (let p = 1; p <= total; p++) {
       if (uiState.autoDetectCancelGuru) break;
       showAutoProgress(((p - 1) / total) * 100, `Mendeteksi${ocr ? ' + membaca label' : ''} halaman ${p} / ${total}...`);
-      await new Promise((r) => setTimeout(r, 0)); // beri napas ke UI
+      await new Promise((r) => setTimeout(r, 0));
       found[p] = await detectPage(pdf, p, { ocr });
       count += found[p].length;
     }
@@ -979,7 +947,6 @@ export async function runAutoDetectGuru() {
     return;
   }
 
-  // Ganti semua draf lama, tambahkan hasil baru.
   Object.keys(uiState.fieldsByPageGuru).forEach((p) => {
     uiState.fieldsByPageGuru[p] = (uiState.fieldsByPageGuru[p] || []).filter((f) => !f.auto);
   });
@@ -1062,9 +1029,6 @@ export async function clearAutoGuru() {
   redrawGuruFieldBoxes();
 }
 
-/* ------------------------------------------------------------------ */
-/* Simpan                                                              */
-/* ------------------------------------------------------------------ */
 export async function saveFieldMapGuru(idLkpd) {
   const payload = {
     totalPages: uiState.totalPagesGuru,
@@ -1087,9 +1051,6 @@ export async function saveFieldMapGuru(idLkpd) {
   return res;
 }
 
-/* ------------------------------------------------------------------ */
-/* Ekspos ke window (dipakai atribut onclick di HTML)                  */
-/* ------------------------------------------------------------------ */
 window.openModalPetakanFieldGuru = openModalPetakanFieldGuru;
 window.closeModalPetakanFieldGuru = closeModalPetakanFieldGuru;
 window.changeGuruPage = changeGuruPage;

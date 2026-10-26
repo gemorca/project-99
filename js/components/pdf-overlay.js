@@ -4,8 +4,6 @@ import { apiPost } from '../services/api.js';
 import { fetchPdfArrayBuffer } from '../services/ocr.js';
 import { state, uiState } from '../state.js';
 
-// Editor pemetaan field (guru) dipindah ke field-map-editor.js.
-// Re-export dipertahankan agar import lama (mis. views/guru.js) tetap berjalan.
 export {
   openModalPetakanFieldGuru,
   closeModalPetakanFieldGuru,
@@ -47,8 +45,7 @@ export async function renderLkpdUntukSiswa(containerEl, lkpdObj, ptmId) {
 
     containerEl.innerHTML = `
       <div class="w-full space-y-4">
-        
-        <!-- TAMPILAN KHUSUS MOBILE (HP/Tablet < 768px) -->
+
         <div class="block md:hidden space-y-3 text-center p-4 bg-slate-50 rounded-2xl border border-slate-200 shadow-xs">
           <span class="px-2.5 py-1 bg-purple-100 text-purple-800 font-bold rounded-xl text-[10px] inline-block uppercase font-mono">
             📱 Mode Mobile
@@ -62,7 +59,6 @@ export async function renderLkpdUntukSiswa(containerEl, lkpdObj, ptmId) {
           </button>
         </div>
 
-        <!-- TAMPILAN KHUSUS DESKTOP (Laptop/PC >= 768px) -->
         <div id="desktop-inline-lkpd-wrap" class="hidden md:block space-y-4 w-full">
           <div id="desktop-lkpd-pages" class="space-y-4 flex flex-col items-center"></div>
           <button id="btn-simpan-jawaban-lkpd-desktop" class="w-full py-3.5 bg-brand-blue hover:bg-blue-700 text-white font-black rounded-2xl shadow transition text-xs">

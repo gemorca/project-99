@@ -101,7 +101,6 @@ export function renderEvaluasiView(ptmId) {
 
   return `
     <div class="max-w-4xl mx-auto space-y-4 text-xs">
-      <!-- Floating Sticky Timer Bar Header -->
       <div id="eval-timer-bar" class="sticky top-16 z-30 bg-brand-navy text-white p-4 rounded-2xl shadow-md flex items-center justify-between transition-colors duration-300 border border-slate-700">
         <div>
           <span class="text-[9px] font-bold text-slate-300 uppercase tracking-wider block">KUIS EVALUASI AKTIF</span>
@@ -113,7 +112,6 @@ export function renderEvaluasiView(ptmId) {
         </div>
       </div>
 
-      <!-- Daftar Soal Pilihan Ganda -->
       <div class="space-y-4">
         ${soalList
           .map(
@@ -290,10 +288,10 @@ export async function submitEvaluasiSiswa(ptmId, idEvaluasi, isAutoSubmit = fals
       confirmButtonColor: '#0D6EFD'
     });
   } else {
-    Swal.fire({ 
-      icon: 'error', 
-      title: 'Gagal Mengirim Evaluasi', 
-      text: res.message || 'Terjadi kesalahan saat menyimpan jawaban.' 
+    Swal.fire({
+      icon: 'error',
+      title: 'Gagal Mengirim Evaluasi',
+      text: res.message || 'Terjadi kesalahan saat menyimpan jawaban.'
     });
   }
 }

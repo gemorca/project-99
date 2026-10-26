@@ -1,9 +1,3 @@
-/**
- * OCR untuk pelabelan kotak (Tahap 4). Memakai Tesseract.js (bahasa Indonesia).
- * Pustaka dimuat malas dari CDN hanya saat guru menekan "Deteksi Otomatis".
- * Gagal memuat/OCR tidak fatal: kotak tetap berlabel default "Field N".
- */
-
 const TESSERACT_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
 let loading = null;
 
@@ -24,11 +18,10 @@ function loadTesseract() {
   return loading;
 }
 
-/** Buat worker OCR. Panggil terminate() setelah selesai. */
 export async function createLabelWorker(lang = 'ind') {
   const T = await loadTesseract();
   const worker = await T.createWorker(lang);
-  await worker.setParameters({ tessedit_pageseg_mode: '11' }); // sparse text: label tersebar
+  await worker.setParameters({ tessedit_pageseg_mode: '11' });
   return worker;
 }
 
@@ -41,7 +34,6 @@ function flattenWords(data) {
   return out;
 }
 
-/** @returns {Promise<Array<{text:string,x0:number,y0:number,x1:number,y1:number,conf:number}>>} piksel canvas */
 export async function recognizeWords(worker, canvas) {
   const { data } = await worker.recognize(canvas, {}, { blocks: true });
   return flattenWords(data)

@@ -71,7 +71,7 @@ export function renderGameTypeBody(gameId, tipe, items, ptmId) {
     return `
       <div id="matching-container-${gameId}" class="relative select-none my-4 p-2 touch-none">
         <svg id="matching-svg-${gameId}" class="absolute inset-0 w-full h-full pointer-events-none z-10 overflow-visible"></svg>
-        
+
         <div class="grid grid-cols-2 gap-6 sm:gap-16">
           <div class="space-y-4">
             <span class="font-black text-brand-navy block text-[11px] uppercase tracking-wider mb-2">Soal / Pertanyaan</span>
@@ -260,7 +260,6 @@ export function renderGameTypeBody(gameId, tipe, items, ptmId) {
       <div class="space-y-4">
         <div class="p-3 bg-purple-50 border border-purple-200 rounded-2xl space-y-1">
           <span class="font-black text-purple-900 block text-xs">🔍 Cari Kata-Kata Istilah Berikut:</span>
-          <!-- Tambahkan id ws-${gameId}-badges pada pembungkus badge -->
           <div id="ws-${gameId}-badges" class="flex flex-wrap gap-1.5 mt-1">
             ${words
         .map(

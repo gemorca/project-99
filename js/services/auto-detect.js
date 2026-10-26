@@ -1,23 +1,3 @@
-/**
- * Kerangka Deteksi Otomatis Field LKPD (Tahap 1)
- *
- * Tahap 1 menyediakan kerangka:
- *  - render halaman PDF ke canvas offscreen beresolusi tinggi,
- *  - registry detektor (plug-in),
- *  - normalisasi hasil ke format peta_field_json (persen 0-100).
- *
- * Detektor terpasang:
- *  - Tahap 2: 'dotted-lines' (garis titik-titik dan garis isian abu-abu), lihat detectors/dotted-lines.js
- *  - Tahap 3: 'table-cells' (sel tabel kosong dan kotak jawaban), lihat detectors/table-cells.js
- *  - Tahap 5: gabung garis bertumpuk jadi textarea, buang tumpang tindih, lihat detectors/merger.js
- *  - Tahap 4: pelabelan via OCR (opts.ocr = worker dari createLabelWorker), lihat detectors/labeler.js
- *
- * Kontrak detektor:
- *   async (ctx) => Array<{ x, y, w, h, type?, label? }>
- *   ctx = { pageNum, width, height, canvas, getImageData() }
- *   x, y, w, h dalam PERSEN halaman (0-100), sama seperti peta_field_json.
- */
-
 import { dottedLinesDetector, detectDottedLines } from './detectors/dotted-lines.js';
 import { tableCellsDetector } from './detectors/table-cells.js';
 import { assignLabels } from './detectors/labeler.js';
@@ -43,10 +23,8 @@ function isDebugOn() {
 }
 
 registerDetector('dotted-lines', dottedLinesDetector);
-registerDetector('table-cells', tableCellsDetector); // harus setelah dotted-lines: memakai garis titik untuk membersihkan isi sel
+registerDetector('table-cells', tableCellsDetector);
 
-// Detektor uji: satu kotak per halaman. Aktif bila localStorage.ELKPD_DEBUG_DETECT = '1'.
-// Dipakai untuk memastikan alur render -> deteksi -> gabung -> tampil sudah benar.
 const debugDetector = {
   name: 'debug-sample',
   fn: async () => [{ x: 10, y: 10, w: 30, h: 4, type: 'text', label: 'Debug' }]
@@ -59,7 +37,7 @@ export function getDetectorCount() {
 export async function renderPageToCanvas(pdfDoc, pageNum, scale = 2) {
   const page = await pdfDoc.getPage(pageNum);
   const viewport = page.getViewport({ scale });
-  const canvas = document.createElement('canvas'); // offscreen, tidak dipasang ke DOM
+  const canvas = document.createElement('canvas');
   canvas.width = Math.floor(viewport.width);
   canvas.height = Math.floor(viewport.height);
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -101,15 +79,13 @@ export function normalizeDetections(rawList) {
       type: r.type === 'textarea' ? 'textarea' : 'text',
       label: r.label ? String(r.label).trim() : ''
     };
-    if (r.source) item.source = String(r.source); // dipakai Tahap 4-5
-    if (r.grid) item.grid = r.grid; // { table, row, col } untuk pelabelan tabel
+    if (r.source) item.source = String(r.source);
+    if (r.grid) item.grid = r.grid;
     out.push(item);
   });
   return out;
 }
 
-// Garis titik yang jatuh di dalam sel/kotak terdeteksi tidak perlu jadi kotak sendiri:
-// sel yang lebih besar sudah menjadi area menulis. (Penggabungan menyeluruh: Tahap 5.)
 export function dropLinesInsideCells(list) {
   const cells = list.filter((f) => f.source === 'table-cell');
   if (!cells.length) return list;
@@ -135,7 +111,6 @@ export async function detectPage(pdfDoc, pageNum, opts = {}) {
       width: canvas.width,
       height: canvas.height,
       canvas,
-      // Dimemoisasi: beberapa detektor memakai data piksel dan garis titik yang sama.
       getImageData: () => imageData || (imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height)),
       getDottedLines: () => dottedLines || (dottedLines = detectDottedLines(ctx.getImageData()))
     };
@@ -158,7 +133,7 @@ export async function detectPage(pdfDoc, pageNum, opts = {}) {
         console.warn(`[auto-detect] OCR label gagal di halaman ${pageNum}:`, err);
       }
     }
-    return mergeFields(result, canvas.width, canvas.height); // Tahap 5: gabung garis, buang tumpang tindih
+    return mergeFields(result, canvas.width, canvas.height);
   } finally {
     releaseCanvas(canvas);
   }

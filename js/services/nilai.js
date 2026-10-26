@@ -140,3 +140,154 @@ export function buildRingkasanSiswa(subs) {
   hasil.sort((a, b) => (b.pending > 0) - (a.pending > 0) || a.nama.localeCompare(b.nama, 'id'));
   return hasil;
 }
+
+export const KOLOM_TIPE = [
+  { key: 'lkpd', label: 'LKPD' },
+  { key: 'game', label: 'Game' },
+  { key: 'evaluasi', label: 'Evaluasi' }
+];
+
+export function kelompokTipe(tipe) {
+  const k = String(tipe || '').trim().toLowerCase();
+  if (k === 'lkpd' || k === 'lkpd_isian') return 'lkpd';
+  if (k === 'game' || k === 'evaluasi') return k;
+  return 'lain';
+}
+
+export function filterSubmisi(subs, { ptm = '', kelas = '' } = {}) {
+  let out = subs || [];
+  if (ptm) out = out.filter((s) => String(s.id_pertemuan || '').trim() === String(ptm).trim());
+  if (kelas) out = out.filter((s) => String(s.kelas || '').trim() === String(kelas).trim());
+  return out;
+}
+
+export function filterSiswa(list, q) {
+  const k = String(q || '').trim().toLowerCase();
+  if (!k) return list;
+  return list.filter((r) => r.nama.toLowerCase().includes(k) || r.username.toLowerCase().includes(k));
+}
+
+function ringkasGrup(grup) {
+  const nilai = grup.map(getNilaiSubmisi).filter((n) => n !== null);
+  return { jumlah: grup.length, rata: rataRata(nilai), pending: grup.length - nilai.length };
+}
+
+export function buildRekap(list, ptmList, filterPtm = '') {
+  const f = String(filterPtm || '').trim();
+  const kolom = (ptmList || [])
+    .slice()
+    .sort((a, b) => Number(a.nomor_pertemuan) - Number(b.nomor_pertemuan))
+    .filter((p) => !f || String(p.id_pertemuan).trim() === f)
+    .map((p) => ({
+      id: String(p.id_pertemuan).trim(),
+      label: `Pertemuan ${p.nomor_pertemuan}`,
+      singkat: `P${p.nomor_pertemuan}`,
+      judul: p.judul_pertemuan || ''
+    }));
+
+  const known = new Set(kolom.map((k) => k.id));
+  const adaLainnya = list.some((r) => r.counted.some((s) => !known.has(String(s.id_pertemuan || '').trim())));
+  if (adaLainnya) kolom.push({ id: '', label: 'Pertemuan lain / terhapus', singkat: 'Lain', judul: '', lain: true });
+
+  const baris = list.map((r) => {
+    const byId = new Map(r.perPertemuan.map((g) => [g.id, g]));
+    const sel = kolom.map((k) => {
+      if (k.lain) {
+        const grup = r.counted.filter((s) => !known.has(String(s.id_pertemuan || '').trim()));
+        return grup.length ? ringkasGrup(grup) : null;
+      }
+      const g = byId.get(k.id);
+      return g && g.jumlah > 0 ? { jumlah: g.jumlah, rata: g.rata, pending: g.pending } : null;
+    });
+    const tipe = {};
+    KOLOM_TIPE.forEach(({ key }) => {
+      const grup = r.counted.filter((s) => kelompokTipe(s.tipe_sub) === key);
+      tipe[key] = grup.length ? ringkasGrup(grup) : null;
+    });
+    return { r, sel, tipe };
+  });
+
+  return { kolom, baris };
+}
+
+export function statistikKelas(baris, kkm = 75) {
+  const batas = Number.isFinite(Number(kkm)) ? Number(kkm) : 75;
+  const bernilai = baris.filter((b) => b.r.rata !== null);
+  let tertinggi = null;
+  let terendah = null;
+  bernilai.forEach((b) => {
+    if (!tertinggi || b.r.rata > tertinggi.nilai) tertinggi = { nama: b.r.nama, nilai: b.r.rata };
+    if (!terendah || b.r.rata < terendah.nilai) terendah = { nama: b.r.nama, nilai: b.r.rata };
+  });
+  const tuntas = bernilai.filter((b) => b.r.rata >= batas).length;
+  return {
+    jumlahSiswa: baris.length,
+    jumlahBernilai: bernilai.length,
+    rataKelas: rataRata(bernilai.map((b) => b.r.rata)),
+    tertinggi,
+    terendah,
+    pending: baris.reduce((n, b) => n + b.r.pending, 0),
+    kkm: batas,
+    tuntas,
+    persenTuntas: bernilai.length ? Math.round((tuntas / bernilai.length) * 1000) / 10 : null
+  };
+}
+
+export function csvCell(v) {
+  if (typeof v === 'number') return String(v);
+  let s = v === null || v === undefined ? '' : String(v);
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
+export function toCsv(header, rows) {
+  return '﻿' + [header, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
+}
+
+function nilaiCsv(c) {
+  if (!c) return '';
+  if (c.rata === null) return 'Belum dinilai';
+  return c.rata;
+}
+
+export function csvRekapMatriks(rekap) {
+  const header = ['Siswa', 'Kelas', ...rekap.kolom.map((k) => k.label), 'Rata-rata', 'Belum dinilai'];
+  const rows = rekap.baris.map((b) => [
+    b.r.nama,
+    b.r.kelas,
+    ...b.sel.map(nilaiCsv),
+    b.r.rata === null ? '' : b.r.rata,
+    b.r.pending
+  ]);
+  return toCsv(header, rows);
+}
+
+export function csvDetailSubmisi(list) {
+  const header = [
+    'ID Submisi', 'Username', 'Nama Siswa', 'Kelas', 'Pertemuan', 'Tipe Modul', 'Judul Modul',
+    'Nilai', 'Status', 'Waktu Submisi', 'Catatan Guru', 'Dihitung'
+  ];
+  const rows = [];
+  list.forEach((r) => {
+    r.perPertemuan.forEach((g) => {
+      g.subs.forEach((s) => {
+        const n = getNilaiSubmisi(s);
+        rows.push([
+          s.id_sub,
+          s.username_siswa,
+          s.nama_siswa,
+          s.kelas,
+          g.label,
+          labelTipe(s.tipe_sub),
+          labelModul(s),
+          n === null ? '' : n,
+          s.status,
+          s.timestamp,
+          s.catatan_guru,
+          r.hitung.has(String(s.id_sub)) ? 'ya' : 'tidak'
+        ]);
+      });
+    });
+  });
+  return toCsv(header, rows);
+}

@@ -39,7 +39,6 @@ export const uiState = {
   currentActiveLkpdContext: {},
   activeLkpdFitMode: 'fit',
   activeLkpdScale: 1.0,
-  // Editor field mapping (guru)
   selectedFieldGuru: null,
   zoomGuru: 1,
   modeGuru: 'draw',

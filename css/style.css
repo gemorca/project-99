@@ -1,4 +1,3 @@
-/* Matikan pull-to-refresh & efek bounce (gulir atas-bawah) di Chrome / PWA standalone */
 html,
 body {
     overscroll-behavior-y: none;

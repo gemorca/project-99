@@ -4,9 +4,8 @@ import { openModalPetakanFieldGuru } from '../components/pdf-overlay.js';
 import { collectHotspotItem, renderHotspotConfigForm, renderHotspotItemRow } from '../games/hotspot.js';
 import { apiPost, fetchAllInitialData, refreshSubmissionsData, saveToLocalStorage } from '../services/api.js';
 import { state } from '../state.js';
-import { buildRingkasanSiswa, escapeHtml, getNilaiSubmisi, labelModul, labelTipe } from '../services/nilai.js';
+import { buildRekap, buildRingkasanSiswa, csvDetailSubmisi, csvRekapMatriks, escapeHtml, filterSiswa, filterSubmisi, getNilaiSubmisi, KOLOM_TIPE, labelModul, labelTipe, statistikKelas } from '../services/nilai.js';
 import { populateKelasSelects } from '../views/admin.js';
-
 
 const koreksiFilter = { q: '', kelas: '', ptm: '', pending: false };
 let koreksiDetailKey = null;
@@ -146,7 +145,6 @@ export function renderGuruSoalView(container) {
 
   container.innerHTML = `
     <div class="space-y-4 text-xs">
-      <!-- Header Action -->
       <div class="flex flex-wrap items-center justify-between gap-2 bg-white p-4 rounded-2xl border shadow-xs">
         <span class="font-bold text-slate-700">Bank Soal Evaluasi: <b>${soalList.length} Soal</b></span>
         <div class="flex items-center gap-2">
@@ -159,11 +157,10 @@ export function renderGuruSoalView(container) {
         </div>
       </div>
 
-      <!-- Daftar Modul Evaluasi Aktif & Durasinya -->
       <div class="space-y-2">
         <h4 class="font-black text-brand-navy text-xs font-heading">📌 Modul Evaluasi Per Pertemuan:</h4>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          ${evalList.length === 0 
+          ${evalList.length === 0
             ? `<div class="p-4 bg-white rounded-2xl border text-slate-400 italic">Belum ada modul evaluasi yang dibuat.</div>`
             : evalList.map((ev) => {
                 const ptmObj = ptmList.find((p) => String(p.id_pertemuan) === String(ev.id_pertemuan));
@@ -205,7 +202,6 @@ export function renderGuruSoalView(container) {
         </div>
       </div>
 
-      <!-- Bank Soal -->
       <div class="space-y-2 pt-2">
         <h4 class="font-black text-brand-navy text-xs font-heading">📝 Daftar Soal Pilihan Ganda:</h4>
         ${soalList.length === 0
@@ -553,109 +549,215 @@ export async function handleEvaluasiSubmit(e) {
   }
 }
 
+const rekapFilter = { q: '', kelas: '', ptm: '', mode: 'ptm', kkm: 75 };
+
+function getRekapData() {
+  const subs = filterSubmisi(state.cachedData.submissions || [], rekapFilter);
+  const list = filterSiswa(buildRingkasanSiswa(subs), rekapFilter.q).sort(
+    (a, b) => a.kelas.localeCompare(b.kelas, 'id') || a.nama.localeCompare(b.nama, 'id')
+  );
+  return { list, rekap: buildRekap(list, state.cachedData.pertemuan || [], rekapFilter.ptm) };
+}
+
 export function renderGuruRekapView(container) {
   const subs = state.cachedData.submissions || [];
+  const kelasList = Array.from(new Set(subs.map((s) => String(s.kelas || '').trim()).filter(Boolean))).sort();
+  const ptmList = (state.cachedData.pertemuan || [])
+    .slice()
+    .sort((a, b) => Number(a.nomor_pertemuan) - Number(b.nomor_pertemuan));
+  const inputCls = 'p-2.5 rounded-xl border border-slate-300 font-bold bg-white';
+
   container.innerHTML = `
     <div class="space-y-4 text-xs">
-      <div class="flex items-center justify-between bg-white p-4 rounded-2xl border shadow-xs">
-        <span class="font-bold text-slate-700">Total Submisi Nilai: <b>${subs.length}</b></span>
-        <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center justify-between gap-2 bg-white p-4 rounded-2xl border shadow-xs">
+        <span id="rekap-total" class="font-bold text-slate-700"></span>
+        <div class="flex flex-wrap items-center gap-2">
           <button onclick="refreshSubmissionsData()" class="px-4 py-2 bg-brand-blue hover:bg-blue-600 text-white font-bold rounded-xl shadow transition flex items-center gap-1.5">
             <span>🔄</span> Refresh Data
           </button>
-          <button onclick="exportRekapToCsv()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow flex items-center gap-1.5 transition">
-            <span>📊 Ekspor Excel / CSV</span>
-          </button>
+          <button onclick="exportRekapMatriksCsv()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow transition">📊 CSV Rekap Matriks</button>
+          <button onclick="exportRekapDetailCsv()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow transition">📄 CSV Detail Submisi</button>
         </div>
       </div>
+
+      <div class="bg-white p-4 rounded-2xl border shadow-xs grid grid-cols-2 lg:grid-cols-5 gap-2">
+        <input type="search" placeholder="Cari nama siswa..." value="${escapeHtml(rekapFilter.q)}" oninput="setRekapFilter('q', this.value)" class="${inputCls} col-span-2 lg:col-span-1" />
+        <select onchange="setRekapFilter('kelas', this.value)" class="${inputCls}">
+          <option value="">Semua Kelas</option>
+          ${kelasList.map((k) => `<option value="${escapeHtml(k)}" ${rekapFilter.kelas === k ? 'selected' : ''}>${escapeHtml(k)}</option>`).join('')}
+        </select>
+        <select onchange="setRekapFilter('ptm', this.value)" class="${inputCls}">
+          <option value="">Semua Pertemuan</option>
+          ${ptmList.map((p) => `<option value="${escapeHtml(p.id_pertemuan)}" ${rekapFilter.ptm === String(p.id_pertemuan).trim() ? 'selected' : ''}>Pertemuan ${escapeHtml(p.nomor_pertemuan)}</option>`).join('')}
+        </select>
+        <label class="${inputCls} flex items-center gap-2">
+          <span class="shrink-0">KKM</span>
+          <input type="number" min="0" max="100" value="${escapeHtml(rekapFilter.kkm)}" oninput="setRekapKkm(this.value)" class="w-full bg-transparent font-black text-brand-blue" />
+        </label>
+        <div class="flex rounded-xl border border-slate-300 overflow-hidden font-bold">
+          <button id="rekap-mode-ptm" onclick="setRekapMode('ptm')" class="flex-1 p-2.5">Per pertemuan</button>
+          <button id="rekap-mode-tipe" onclick="setRekapMode('tipe')" class="flex-1 p-2.5 border-l border-slate-300">Per tipe modul</button>
+        </div>
+      </div>
+
+      <div id="rekap-stats" class="grid grid-cols-2 lg:grid-cols-6 gap-2"></div>
+
       <div class="bg-white p-5 rounded-3xl border shadow-sm">
         <h3 class="font-black text-brand-navy text-sm font-heading border-b pb-2">🏆 Buku Nilai & Rekapitulasi Siswa</h3>
+        <p class="text-[11px] text-slate-500 mt-2">Nilai = rata-rata modul (submisi terbaru per modul). <b class="text-amber-600">*</b> = masih ada submisi belum dinilai. Merah = di bawah KKM. Ubah nilai lewat menu Koreksi.</p>
         <div class="overflow-x-auto mt-3">
           <table class="w-full text-left">
-            <thead class="bg-brand-navy text-white font-heading">
-              <tr>
-                <th class="p-3">Nama Siswa</th>
-                <th class="p-3">Kelas</th>
-                <th class="p-3 text-center">Tipe Submisi</th>
-                <th class="p-3 text-center">Nilai Akhir</th>
-                <th class="p-3">Status</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-              ${subs.length === 0
-                ? `<tr><td colspan="5" class="p-4 text-center text-slate-400">Belum ada data nilai masuk.</td></tr>`
-                : subs
-                  .map((s) => {
-                    const scoreDisplay =
-                      s.nilai_esai !== '' && s.nilai_esai !== null && s.nilai_esai !== undefined
-                        ? s.nilai_esai
-                        : s.skor_otomatis !== '' && s.skor_otomatis !== null && s.skor_otomatis !== undefined
-                          ? s.skor_otomatis
-                          : 0;
-                    return `
-                      <tr>
-                        <td class="p-3 font-bold">${s.nama_siswa || '-'}</td>
-                        <td class="p-3">${s.kelas || '-'}</td>
-                        <td class="p-3 text-center uppercase font-mono">${s.tipe_sub || '-'}</td>
-                        <td class="p-3 text-center font-black text-emerald-600">${scoreDisplay}</td>
-                        <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${s.status === 'Selesai Dinilai' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${s.status || 'Belum'}</span></td>
-                      </tr>
-                    `;
-                  })
-                  .join('')
-              }
-            </tbody>
+            <thead id="rekap-head" class="bg-brand-navy text-white font-heading"></thead>
+            <tbody id="rekap-body" class="divide-y divide-slate-100"></tbody>
           </table>
         </div>
       </div>
     </div>
   `;
+
+  renderRekapKonten();
 }
 
-export function exportRekapToCsv() {
-  const subs = state.cachedData.submissions || [];
-  if (subs.length === 0) {
-    showToast('warning', 'Belum ada data submisi untuk diekspor!');
+function sel(c, kkm) {
+  if (!c) return '<span class="text-slate-300">-</span>';
+  if (c.rata === null) {
+    return '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">Belum dinilai</span>';
+  }
+  const warna = c.rata < kkm ? 'text-red-600' : 'text-slate-800';
+  const tanda = c.pending > 0 ? `<span class="ml-0.5 text-amber-600 font-black" title="${c.pending} submisi belum dinilai">*</span>` : '';
+  return `<span class="font-black ${warna}">${c.rata}</span>${tanda}`;
+}
+
+function kartuStat(judul, isi, sub = '') {
+  return `
+    <div class="bg-white p-3 rounded-2xl border shadow-xs">
+      <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">${judul}</span>
+      <span class="block text-base font-black text-brand-navy mt-0.5">${isi}</span>
+      ${sub ? `<span class="block text-[10px] text-slate-500 truncate">${sub}</span>` : ''}
+    </div>
+  `;
+}
+
+export function renderRekapKonten() {
+  const body = document.getElementById('rekap-body');
+  if (!body) return;
+
+  const { list, rekap } = getRekapData();
+  const st = statistikKelas(rekap.baris, rekapFilter.kkm);
+  const totalSub = list.reduce((n, r) => n + r.subs.length, 0);
+
+  const total = document.getElementById('rekap-total');
+  if (total) total.innerHTML = `Siswa: <b>${list.length}</b> &nbsp;|&nbsp; Submisi: <b>${totalSub}</b>`;
+
+  ['ptm', 'tipe'].forEach((m) => {
+    const btn = document.getElementById(`rekap-mode-${m}`);
+    if (btn) btn.className = `flex-1 p-2.5 ${m === 'tipe' ? 'border-l border-slate-300 ' : ''}${rekapFilter.mode === m ? 'bg-brand-navy text-white' : 'bg-white text-slate-700'}`;
+  });
+
+  const stats = document.getElementById('rekap-stats');
+  if (stats) {
+    stats.innerHTML = [
+      kartuStat('Jumlah Siswa', st.jumlahSiswa, `${st.jumlahBernilai} sudah punya nilai`),
+      kartuStat('Rata-rata Kelas', st.rataKelas === null ? '-' : st.rataKelas),
+      kartuStat('Tertinggi', st.tertinggi ? st.tertinggi.nilai : '-', st.tertinggi ? escapeHtml(st.tertinggi.nama) : ''),
+      kartuStat('Terendah', st.terendah ? st.terendah.nilai : '-', st.terendah ? escapeHtml(st.terendah.nama) : ''),
+      kartuStat('Belum Dinilai', st.pending, 'submisi'),
+      kartuStat(`Tuntas (KKM ${escapeHtml(st.kkm)})`, st.persenTuntas === null ? '-' : `${st.persenTuntas}%`, `${st.tuntas} dari ${st.jumlahBernilai} siswa`)
+    ].join('');
+  }
+
+  const kolom =
+    rekapFilter.mode === 'tipe'
+      ? KOLOM_TIPE.map((k) => ({ judul: k.label, tip: k.label }))
+      : rekap.kolom.map((k) => ({ judul: k.singkat, tip: k.judul ? `${k.label} - ${k.judul}` : k.label }));
+
+  const head = document.getElementById('rekap-head');
+  if (head) {
+    head.innerHTML = `
+      <tr>
+        <th class="p-3">Siswa</th>
+        <th class="p-3">Kelas</th>
+        ${kolom.map((k) => `<th class="p-3 text-center" title="${escapeHtml(k.tip)}">${escapeHtml(k.judul)}</th>`).join('')}
+        <th class="p-3 text-center">Rata-rata</th>
+        <th class="p-3 text-center">Belum dinilai</th>
+      </tr>
+    `;
+  }
+
+  if (rekap.baris.length === 0) {
+    body.innerHTML = `<tr><td colspan="${kolom.length + 4}" class="p-4 text-center text-slate-400">Tidak ada data siswa yang sesuai.</td></tr>`;
     return;
   }
 
-  let csvContent = '\uFEFF';
-  csvContent +=
-    'ID Submisi,Username,Nama Siswa,Kelas,Tipe Modul,Skor Otomatis,Nilai Esai,Nilai Akhir,Status,Waktu Submisi,Catatan Guru\n';
+  body.innerHTML = rekap.baris
+    .map((b) => {
+      const sels = rekapFilter.mode === 'tipe' ? KOLOM_TIPE.map((k) => b.tipe[k.key]) : b.sel;
+      return `
+        <tr>
+          <td class="p-3 font-bold whitespace-nowrap">
+            <button data-key="${escapeHtml(encodeURIComponent(b.r.key))}" onclick="openRekapSiswa(this.dataset.key)" class="text-left text-brand-blue hover:underline font-bold">${escapeHtml(b.r.nama)}</button>
+          </td>
+          <td class="p-3">${escapeHtml(b.r.kelas)}</td>
+          ${sels.map((c) => `<td class="p-3 text-center">${sel(c, st.kkm)}</td>`).join('')}
+          <td class="p-3 text-center text-sm">${b.r.rata === null ? '<span class="text-slate-300">-</span>' : `<span class="font-black ${b.r.rata < st.kkm ? 'text-red-600' : 'text-emerald-600'}">${b.r.rata}</span>`}</td>
+          <td class="p-3 text-center">${b.r.pending > 0 ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">${b.r.pending}</span>` : '<span class="text-slate-300">0</span>'}</td>
+        </tr>
+      `;
+    })
+    .join('');
+}
 
-  subs.forEach((s) => {
-    const finalScore =
-      s.nilai_esai !== '' && s.nilai_esai !== null && s.nilai_esai !== undefined
-        ? s.nilai_esai
-        : s.skor_otomatis !== '' && s.skor_otomatis !== null && s.skor_otomatis !== undefined
-          ? s.skor_otomatis
-          : 0;
+export function setRekapFilter(key, value) {
+  rekapFilter[key] = String(value);
+  renderRekapKonten();
+}
 
-    const row = [
-      `"${s.id_sub || ''}"`,
-      `"${s.username_siswa || ''}"`,
-      `"${(s.nama_siswa || '').replace(/"/g, '""')}"`,
-      `"${s.kelas || ''}"`,
-      `"${String(s.tipe_sub || '').toUpperCase()}"`,
-      `"${s.skor_otomatis || 0}"`,
-      `"${s.nilai_esai || ''}"`,
-      `"${finalScore}"`,
-      `"${s.status || ''}"`,
-      `"${s.timestamp || ''}"`,
-      `"${(s.catatan_guru || '').replace(/"/g, '""')}"`
-    ];
-    csvContent += row.join(',') + '\n';
-  });
+export function setRekapMode(mode) {
+  rekapFilter.mode = mode === 'tipe' ? 'tipe' : 'ptm';
+  renderRekapKonten();
+}
 
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+export function setRekapKkm(value) {
+  const n = parseFloat(value);
+  rekapFilter.kkm = Number.isFinite(n) ? n : 75;
+  renderRekapKonten();
+}
+
+export async function openRekapSiswa(encodedKey) {
+  await switchView('guru-koreksi');
+  openKoreksiSiswaModal(encodedKey);
+}
+
+function unduhCsv(namaFile, csv) {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', `Rekap_Nilai_ELKPD_STEAM_${new Date().toISOString().slice(0, 10)}.csv`);
+  link.setAttribute('download', namaFile);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  showToast('success', 'Rekap nilai berhasil diunduh (CSV)!');
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export function exportRekapMatriksCsv() {
+  const { rekap } = getRekapData();
+  if (rekap.baris.length === 0) {
+    showToast('warning', 'Belum ada data nilai untuk diekspor!');
+    return;
+  }
+  unduhCsv(`Rekap_Nilai_Matriks_${new Date().toISOString().slice(0, 10)}.csv`, csvRekapMatriks(rekap));
+  showToast('success', 'Rekap matriks berhasil diunduh (CSV)!');
+}
+
+export function exportRekapDetailCsv() {
+  const { list } = getRekapData();
+  if (list.length === 0) {
+    showToast('warning', 'Belum ada data submisi untuk diekspor!');
+    return;
+  }
+  unduhCsv(`Rekap_Nilai_Detail_${new Date().toISOString().slice(0, 10)}.csv`, csvDetailSubmisi(list));
+  showToast('success', 'Detail submisi berhasil diunduh (CSV)!');
 }
 
 export function populatePertemuanSelects() {
@@ -1666,7 +1768,12 @@ export async function handleGradeSubmit(e) {
   }
 }
 
-window.exportRekapToCsv = exportRekapToCsv;
+window.exportRekapMatriksCsv = exportRekapMatriksCsv;
+window.exportRekapDetailCsv = exportRekapDetailCsv;
+window.setRekapFilter = setRekapFilter;
+window.setRekapMode = setRekapMode;
+window.setRekapKkm = setRekapKkm;
+window.openRekapSiswa = openRekapSiswa;
 window.openPertemuanModal = openPertemuanModal;
 window.closePertemuanModal = closePertemuanModal;
 window.handlePertemuanSubmit = handlePertemuanSubmit;

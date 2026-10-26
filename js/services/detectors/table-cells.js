@@ -1,54 +1,32 @@
-/**
- * Detektor sel tabel kosong dan kotak jawaban (Tahap 3).
- *
- * Murni fungsi atas data piksel (tanpa DOM), bisa diuji di Node maupun browser.
- *
- * Langkah:
- *  1. Gambar -> abu-abu. Piksel "tinta" = beda mutlak terhadap rata-rata sekitar (box blur).
- *     Beda mutlak (bukan hanya lebih gelap) agar teks putih pada header biru ikut terhitung.
- *  2. Hapus tinta garis titik-titik (hasil Tahap 2) supaya tidak memecah atau mengotori isi sel.
- *  3. Dilasi tinta kecil (tutup celah garis putus-putus), lalu cari area non-tinta yang terhubung.
- *     Tiap area tertutup garis = kandidat sel atau kotak.
- *  4. Saring kandidat:
- *      - bukan latar halaman (tidak menyentuh tepi, tidak terlalu besar),
- *      - bentuk persegi/persegi bersudut bulat (keempat sisi bbox terisi area),
- *      - kosong: tidak ada huruf atau gambar di dalam. Judul kotak ("Jawaban :") di zona atas
- *        boleh ada; kotak isian dimulai tepat di bawahnya.
- *  5. Buang kotak yang membungkus kotak lain (sisakan daun), beri indeks tabel/baris/kolom
- *     untuk pelabelan Tahap 4.
- *
- * Semua jarak dalam satuan u = lebar_gambar / 1190, sama seperti dotted-lines.js.
- */
-
 import { detectDottedLines } from './dotted-lines.js';
 
 export const TABLE_DEFAULTS = {
-  blurRadius: 7, // radius box blur estimasi latar (u)
-  inkThreshold: 18, // beda keabuan minimum agar piksel dianggap tinta
-  closeRadius: 3, // dilasi untuk menutup celah garis putus-putus (u)
-  erasePad: 4, // tebal pita penghapus di sekitar garis titik-titik (u)
-  minCellW: 40, // lebar minimum sel (u)
-  minCellH: 22, // tinggi minimum sel (u)
-  maxAreaFrac: 0.2, // luas maksimum kandidat terhadap halaman
-  maxWidthFrac: 0.92, // lebar maksimum kandidat terhadap halaman
-  edgeCoverage: 0.7, // porsi minimum tiap sisi bbox yang terisi area
-  edgeBand: 3, // ketebalan pita pemeriksaan sisi (u)
-  cornerSkip: 10, // abaikan sudut bulat saat memeriksa sisi (u)
-  minFill: 0.6, // luas area / luas bbox minimum
-  minGray: 195, // keabuan rata-rata minimum isi sel (0-255)
-  maxSat: 45, // saturasi rata-rata maksimum isi sel (0-255)
-  borderCoverage: 0.45, // sisi dianggap berbingkai bila porsi ini terpenuhi (minimal 3 dari 4 sisi)
-  borderMean: 0.65, // rata-rata porsi 4 sisi minimum // porsi minimum tiap sisi yang berbatasan dengan tinta garis
-  trimFrac: 0.6, // baris/kolom lebih sepi dari ini (terhadap maksimum) dipotong dari bbox
-  inset: 4, // jarak dari tepi bbox saat memeriksa isi (u)
-  labelZone: 30, // tinggi zona judul di atas kotak (u)
-  labelZoneFrac: 0.35, // batas zona judul terhadap tinggi kotak
-  labelGap: 3, // jarak kotak isian di bawah judul (u)
-  glyphMinH: 5.5, // tinggi minimum gumpalan tinta yang dianggap huruf/gambar (u)
-  maxInkFrac: 0.03, // porsi tinta maksimum di bawah zona judul
-  textareaH: 40, // tinggi minimum agar bertipe textarea (u)
-  groupGap: 16, // jarak maksimum antar sel yang dianggap satu tabel (u)
-  groupTol: 8 // toleransi sejajar baris/kolom (u)
+  blurRadius: 7,
+  inkThreshold: 18,
+  closeRadius: 3,
+  erasePad: 4,
+  minCellW: 40,
+  minCellH: 22,
+  maxAreaFrac: 0.2,
+  maxWidthFrac: 0.92,
+  edgeCoverage: 0.7,
+  edgeBand: 3,
+  cornerSkip: 10,
+  minFill: 0.6,
+  minGray: 195,
+  maxSat: 45,
+  borderCoverage: 0.45,
+  borderMean: 0.65,
+  trimFrac: 0.6,
+  inset: 4,
+  labelZone: 30,
+  labelZoneFrac: 0.35,
+  labelGap: 3,
+  glyphMinH: 5.5,
+  maxInkFrac: 0.03,
+  textareaH: 40,
+  groupGap: 16,
+  groupTol: 8
 };
 
 function toGray(data, n) {
@@ -81,7 +59,6 @@ function boxBlur(gray, w, h, r) {
   return out;
 }
 
-// Dilasi persegi (2r+1) terpisah arah, O(n).
 function dilate(mask, w, h, r) {
   const tmp = new Uint8Array(w * h);
   for (let y = 0; y < h; y++) {
@@ -107,7 +84,6 @@ function dilate(mask, w, h, r) {
   return out;
 }
 
-// Gumpalan tinta (8-konektivitas): hanya bbox, tanpa peta label.
 function inkComponents(ink, w, h) {
   const seen = new Uint8Array(w * h);
   const stack = new Int32Array(w * h);
@@ -150,7 +126,6 @@ function inkComponents(ink, w, h) {
   return comps;
 }
 
-// Area non-tinta terhubung (4-konektivitas) -> label per piksel + statistik.
 function openRegions(closed, w, h) {
   const labels = new Int32Array(w * h);
   const stack = new Int32Array(w * h);
@@ -186,8 +161,6 @@ function openRegions(closed, w, h) {
   return { labels, regs };
 }
 
-// Potong tonjolan tipis (kebocoran celah garis) dari bbox: baris/kolom yang terisi kurang dari
-// trimFrac * isi maksimum dibuang dari ujung bbox.
 function trimLeaks(labels, w, r, trimFrac) {
   const bw = r.x1 - r.x0 + 1;
   const bh = r.y1 - r.y0 + 1;
@@ -217,8 +190,6 @@ function trimLeaks(labels, w, r, trimFrac) {
   r.y1 = r.y0 - ya + yb;
 }
 
-// Garis tepi nyata: tepat di luar tiap sisi bbox harus ada tinta lurus (garis kotak/sel).
-// Menyingkirkan area datar tanpa bingkai (langit pada gambar, latar di sebelah header).
 function borderInked(ink, w, h, reg, closeR, o, u) {
   const reach = 2 * closeR + 3;
   const skip = Math.round(o.cornerSkip * u);
@@ -257,8 +228,6 @@ function borderInked(ink, w, h, reg, closeR, o, u) {
   return good >= 3 && (fr[0] + fr[1] + fr[2] + fr[3]) / 4 >= o.borderMean;
 }
 
-// Rata-rata keabuan dan saturasi isi area (contoh tiap 3 piksel). Sel isian itu terang dan tidak jenuh;
-// langit pada gambar jenuh biru, header berwarna gelap.
 function meanTone(data, labels, w, r) {
   let g = 0;
   let sat = 0;
@@ -309,11 +278,6 @@ function edgeCovered(labels, w, id, reg, o, u) {
   return fr.every((v) => v >= need);
 }
 
-/**
- * @param {{width:number,height:number,data:Uint8ClampedArray|Uint8Array}} image RGBA
- * @param {{lines?:Array<{x0:number,x1:number,y:number}>}} [options]
- * @returns {Array<{x0:number,y0:number,x1:number,y1:number}>} kotak isian dalam piksel gambar
- */
 export function detectTableCells(image, options = {}) {
   const o = { ...TABLE_DEFAULTS, ...options };
   const { width: w, height: h, data } = image;
@@ -325,7 +289,6 @@ export function detectTableCells(image, options = {}) {
   const ink = new Uint8Array(w * h);
   for (let i = 0; i < ink.length; i++) ink[i] = Math.abs(bg[i] - gray[i]) > o.inkThreshold ? 1 : 0;
 
-  // Hapus tinta garis titik-titik (pita sekitar tiap garis).
   const ep = Math.round(o.erasePad * u);
   lines.forEach((ln) => {
     const ya = Math.max(0, Math.round(ln.y) - ep);
@@ -340,7 +303,6 @@ export function detectTableCells(image, options = {}) {
   const { labels, regs } = openRegions(closed, w, h);
   const comps = inkComponents(ink, w, h);
 
-  // Integral image tinta untuk porsi tinta cepat.
   const W1 = w + 1;
   const integ = new Int32Array(W1 * (h + 1));
   for (let y = 0; y < h; y++) {
@@ -388,7 +350,6 @@ export function detectTableCells(image, options = {}) {
     const tone = meanTone(data, labels, w, r);
     if (tone.gray < o.minGray || tone.sat > o.maxSat) return rej(r, 'tone', tone.gray + '/' + tone.sat);
 
-    // Isi: judul di zona atas boleh ada, sisanya harus kosong.
     const ix0 = r.x0 + inset;
     const iy0 = r.y0 + inset;
     const ix1 = r.x1 - inset;
@@ -400,13 +361,12 @@ export function detectTableCells(image, options = {}) {
     let labelBottom = -1;
     for (const c of comps) {
       if (c.cx < ix0 || c.cx > ix1 || c.cy < iy0 || c.cy > iy1) continue;
-      // struktur garis tepi: gumpalan yang melingkupi hampir seluruh bbox
       if (c.x1 - c.x0 + 1 >= bw * 0.9 && c.y1 - c.y0 + 1 >= bh * 0.9) continue;
       const ch = c.y1 - c.y0 + 1;
       if (c.cy <= zoneEnd) {
         labelBottom = Math.max(labelBottom, c.y1);
       } else if (ch >= glyphH) {
-        labelBottom = -2; // huruf/gambar di bawah zona judul
+        labelBottom = -2;
         if (dbg) dbg.push({ x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1, why: 'glyphcomp', extra: [c.x0, c.y0, c.x1, c.y1, c.area, 'zoneEnd', Math.round(zoneEnd)].join(',') });
         break;
       }
@@ -424,7 +384,6 @@ export function detectTableCells(image, options = {}) {
     cells.push({ x0: r.x0, y0: top, x1: r.x1, y1: r.y1, fullY0: r.y0 });
   });
 
-  // Buang pembungkus: sisakan sel yang tidak memuat sel lain.
   const leaf = cells.filter((a) =>
     !cells.some((b) => {
       if (b === a) return false;
@@ -440,7 +399,6 @@ export function detectTableCells(image, options = {}) {
   return groupIntoTables(leaf, o, u).sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0);
 }
 
-// Kelompokkan sel bersebelahan jadi tabel; beri indeks tabel/baris/kolom (untuk label Tahap 4).
 function groupIntoTables(cells, o, u) {
   const gap = o.groupGap * u;
   const tol = o.groupTol * u;
@@ -493,9 +451,6 @@ function groupIntoTables(cells, o, u) {
   return out;
 }
 
-/**
- * Sel -> kotak isian dalam PERSEN halaman (format peta_field_json).
- */
 export function cellsToFields(cells, width, height, options = {}) {
   const o = { ...TABLE_DEFAULTS, ...options };
   const u = width / 1190;

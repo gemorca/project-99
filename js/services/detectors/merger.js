@@ -1,28 +1,12 @@
-/**
- * Gabung dan bersihkan kotak hasil deteksi (Tahap 5).
- *
- * Murni fungsi (tanpa DOM). Masukan dan keluaran: kotak dalam PERSEN halaman.
- *
- *  1. Garis titik bertumpuk (kolom sama, jarak rapat) digabung jadi satu textarea.
- *     Pemimpin tumpukan hanya menyerap pengikut bila tanpa label, berlabel pertanyaan ("Mengapa?"),
- *     atau berlabel jawaban ("Jawaban ..."). Isian berlabel ("Nama", "Kelas") tidak pernah digabung,
- *     dan pengikut berlabel memutus tumpukan.
- *  2. Kotak yang tumpang tindih dibuang: yang berprioritas lebih rendah dan lebih kecil kalah.
- *     Prioritas: sel tabel > garis gabungan > garis titik tunggal.
- *  3. Tipe ditentukan dari tinggi: >= textareaH (u) atau hasil gabungan = textarea.
- *
- * Satuan u = lebar_gambar / 1190.
- */
-
 export const MERGE_DEFAULTS = {
-  alignTol: 8, // toleransi sejajar tepi kiri/kanan antar garis (u)
-  maxGap: 16, // celah vertikal maksimum antar kotak yang digabung (u)
-  overlapDrop: 0.8, // porsi luas yang tumpang tindih agar kotak yang kalah dibuang
-  textareaH: 40, // tinggi minimum textarea (u)
-  minLabeledW: 9, // kotak tanpa label lebih sempit dari ini (% halaman) dianggap serpihan gambar/ornamen
-  minLineH: 1.2, // garis titik lebih tipis dari ini (% halaman) dianggap serpihan
-  frameMinGap: 80, // celah vertikal minimum dua garis putus-putus yang dianggap bingkai sketsa (u)
-  frameMaxGap: 420 // celah vertikal maksimum bingkai sketsa (u)
+  alignTol: 8,
+  maxGap: 16,
+  overlapDrop: 0.8,
+  textareaH: 40,
+  minLabeledW: 9,
+  minLineH: 1.2,
+  frameMinGap: 80,
+  frameMaxGap: 420
 };
 
 const PRIORITY = { 'table-cell': 3, 'merged-lines': 2, 'dotted-line': 1 };
@@ -34,7 +18,6 @@ function absorbs(label) {
   return !label || /[?!]$/.test(label) || QUESTION_START.test(label);
 }
 
-// Label hasil dedup OCR berakhiran angka ("Jelaskan alasannya 2"): bandingkan tanpa angka.
 const baseLabel = (label) => String(label || '').replace(/\s+\d+$/, '').trim();
 
 function toPx(f, W, H) {
@@ -54,7 +37,6 @@ function mergeStacks(fields, W, H, o, u) {
     let target = null;
     for (const c of chains) {
       const last = c[c.length - 1];
-      // Rata kiri; baris terakhir paragraf boleh lebih pendek (tepi kanan tidak boleh melewati pemimpin).
       const aligned = Math.abs(q.b.x0 - last.b.x0) <= tol && q.b.x1 <= c[0].b.x1 + tol;
       const close = q.b.y0 - last.b.y1 <= gap && q.b.y0 >= last.b.y0;
       const sameLabel = !q.f.label || baseLabel(q.f.label) === baseLabel(c[0].f.label);
@@ -91,8 +73,6 @@ function mergeStacks(fields, W, H, o, u) {
   return fields.filter((_, i) => !drop.has(i)).concat(added);
 }
 
-// Bingkai sketsa putus-putus: sisi atas dan bawah terdeteksi sebagai dua garis titik panjang
-// yang sejajar, jauh, dan tanpa isi di antaranya -> satu kotak penuh.
 function pairFrames(fields, W, H, o, u) {
   const tol = o.alignTol * u;
   const cand = fields

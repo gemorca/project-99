@@ -1,43 +1,26 @@
-/**
- * Detektor garis titik-titik ("........") untuk LKPD hasil gambar/scan.
- *
- * Murni fungsi atas data piksel (tanpa DOM), jadi bisa diuji di Node maupun browser.
- *
- * Langkah:
- *  1. Gambar -> abu-abu. Piksel "tinta" = lebih gelap dari rata-rata sekitarnya (box blur).
- *     Ini membuat titik abu-abu terdeteksi di latar putih, biru muda, kuning, maupun hijau.
- *  2. Kumpulkan gumpalan (connected components) kecil: ukuran titik, bukan huruf atau garis tabel.
- *  3. Kelompokkan gumpalan yang sebaris (y hampir sama), lalu rantai dari kiri ke kanan.
- *     Rantai dengan cukup banyak titik dan cukup panjang = satu garis titik-titik.
- *  4. Ubah garis menjadi kotak isian (persen halaman): dari atas garis sampai sedikit di bawahnya.
- *
- * Semua parameter jarak dinyatakan dalam satuan u = lebar_gambar / 1190, sehingga hasil
- * tidak bergantung pada skala render.
- */
-
 export const DOTTED_DEFAULTS = {
-  blurRadius: 7, // radius box blur untuk estimasi latar (u)
-  inkThreshold: 18, // selisih keabuan minimum agar piksel dianggap tinta
-  maxBlobW: 14, // lebar maksimum gumpalan titik/garis-pendek (u)
-  maxBlobH: 5.5, // tinggi maksimum gumpalan titik (u)
-  minBlobArea: 2, // luas minimum gumpalan (piksel)
-  rowTolerance: 2.2, // selisih y maksimum untuk dianggap sebaris (u)
-  minFragLen: 8, // panjang minimum potongan garis menyatu sebelum digabung (u)
-  minFragCycles: 2, // siklus minimum potongan sebelum digabung
-  slantTolerance: 3.2, // selisih y maksimum antar potongan pada garis yang sama (u)
-  mergeGapFar: 90, // celah lebih lebar boleh digabung bila ada punggung garis samar di dalamnya (u)
-  ridgeDiff: 5, // beda keabuan minimum punggung garis samar
-  mergeGap: 26, // jarak maksimum untuk menggabung potongan garis sebaris (u)
-  maxGap: 10, // jarak maksimum antar gumpalan dalam satu rantai (u)
-  minDots: 8, // jumlah titik minimum satu garis
-  minSpan: 28, // panjang minimum satu garis (u)
-  solidContrast: 45, // kontras minimum garis abu-abu menyatu terhadap latar (0-255)
-  maxSaturation: 45, // saturasi warna maksimum garis abu-abu (garis tabel berwarna lebih jenuh)
-  minModulation: 28, // beda terang-gelap minimum sepanjang garis menyatu (0-255)
-  maxPitch: 9, // rata-rata jarak antar titik maksimum (u): menyingkirkan teks bertitik acak
-  boxAbove: 24, // tinggi area menulis di atas garis (u)
-  boxBelow: 3, // tambahan di bawah garis (u)
-  padX: 4 // tambahan kiri-kanan (u)
+  blurRadius: 7,
+  inkThreshold: 18,
+  maxBlobW: 14,
+  maxBlobH: 5.5,
+  minBlobArea: 2,
+  rowTolerance: 2.2,
+  minFragLen: 8,
+  minFragCycles: 2,
+  slantTolerance: 3.2,
+  mergeGapFar: 90,
+  ridgeDiff: 5,
+  mergeGap: 26,
+  maxGap: 10,
+  minDots: 8,
+  minSpan: 28,
+  solidContrast: 45,
+  maxSaturation: 45,
+  minModulation: 28,
+  maxPitch: 9,
+  boxAbove: 24,
+  boxBelow: 3,
+  padX: 4
 };
 
 function toGray(data, n) {
@@ -48,7 +31,6 @@ function toGray(data, n) {
   return g;
 }
 
-// Rata-rata lokal lewat integral image: O(n), tidak bergantung radius.
 function boxBlur(gray, w, h, r) {
   const W = w + 1;
   const integral = new Int32Array(W * (h + 1));
@@ -121,18 +103,11 @@ function findBlobs(ink, w, h, maxW, maxH, minArea) {
     const bw = maxX - minX + 1;
     const bh = maxY - minY + 1;
     if (tooBig || area < minArea || bh > maxH) continue;
-    // thin = garis panjang-tipis (titik-titik yang menyatu karena resolusi/JPEG)
     blobs.push({ x0: minX, x1: maxX, y0: minY, y1: maxY, cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, thin: bw > maxW });
   }
   return blobs;
 }
 
-
-/**
- * Garis panjang-tipis: titik-titik yang menyatu. Dibedakan dari garis tabel padat
- * lewat modulasi keabuan sepanjang garis (naik-turun berkala), bukan datar.
- * @returns {{cycles:number}|null}
- */
 function analyzeStreak(gray, bg, rgba, w, blob, o, u) {
   const len = blob.x1 - blob.x0 + 1;
   if (len < o.minFragLen * u) return null;
@@ -163,15 +138,12 @@ function analyzeStreak(gray, bg, rgba, w, blob, o, u) {
   const p90 = sorted[Math.floor(len * 0.9)];
   const amp = p90 - p10;
 
-  // Jalur B: garis abu-abu netral yang kontras dan terisolasi. Titik-titik yang menyatu
-  // oleh JPEG terlihat seperti garis padat; garis tabel/kotak berwarna jenuh sehingga ditolak.
   const solidish = meanContrast >= o.solidContrast && meanSat <= o.maxSaturation;
   if (o.debugLog) o.debugLog.push({ x0: blob.x0, x1: blob.x1, y: blob.cy, len, sat: Math.round(meanSat), contrast: Math.round(meanContrast), amp: Math.round(amp), solidish });
   if (amp < o.minModulation) {
     return solidish ? { cycles: Math.max(2, Math.round(len / (6 * u))) } : null;
   }
 
-  // Hitung siklus dengan histeresis agar derau JPEG tidak dihitung
   const mid = (p90 + p10) / 2;
   const hy = amp / 6;
   let state = v[0] > mid ? 1 : 0;
@@ -186,15 +158,10 @@ function analyzeStreak(gray, bg, rgba, w, blob, o, u) {
     }
   }
   const cycles = Math.floor(crossings / 2);
-  // Naik-turun jelas tetapi jaraknya terlalu renggang = garis putus-putus (tepi kotak), bukan titik-titik.
   if (cycles < o.minFragCycles || len / Math.max(cycles, 1) > o.maxPitch * u) return null;
   return { cycles };
 }
 
-/**
- * @param {{width:number,height:number,data:Uint8ClampedArray|Uint8Array}} image  RGBA
- * @returns {Array<{x0:number,x1:number,y:number,n:number}>} garis dalam piksel gambar
- */
 export function detectDottedLines(image, options = {}) {
   const o = { ...DOTTED_DEFAULTS, ...options };
   const { width: w, height: h, data } = image;
@@ -220,7 +187,6 @@ export function detectDottedLines(image, options = {}) {
   });
   dots.sort((a, b) => a.cy - b.cy);
 
-  // Kelompokkan sebaris
   const rows = [];
   let cur = [];
   let curMean = 0;
@@ -234,7 +200,6 @@ export function detectDottedLines(image, options = {}) {
   });
   if (cur.length) rows.push(cur);
 
-  // Rantai kiri->kanan dalam tiap baris
   const closeLine = (chain) => {
     if (chain.length < o.minDots) return;
     const x0 = chain[0].x0;
@@ -262,9 +227,6 @@ export function detectDottedLines(image, options = {}) {
   return mergeCollinear(lines, o, u, gray, w, h);
 }
 
-
-// Apakah ada "punggung" garis tipis (lebih gelap dari baris di atas/bawahnya) di celah x0..x1 pada y?
-// Dipakai untuk menyambung potongan garis yang terlalu pudar untuk lolos ambang tinta.
 function hasRidge(gray, w, h, x0, x1, y, u, minDiff) {
   const yc = Math.round(y);
   const band = (ya, yb) => {
@@ -285,8 +247,6 @@ function hasRidge(gray, w, h, x0, x1, y, u, minDiff) {
   return (above + below) / 2 - core >= minDiff;
 }
 
-// Apakah ada garis tegak (tepi sel tabel / kotak) yang memotong celah x0..x1 di sekitar y?
-// Dipakai agar isian pada sel atau kotak bersebelahan tidak ikut tergabung.
 function crossesVerticalBorder(gray, w, h, x0, x1, y, u) {
   const half = Math.round(25 * u);
   const ya = Math.max(0, Math.round(y) - half);
@@ -304,8 +264,6 @@ function crossesVerticalBorder(gray, w, h, x0, x1, y, u) {
   return false;
 }
 
-// Garis yang kedua ujungnya bertemu garis tegak adalah tepi atas/bawah sebuah kotak (mis. kotak
-// "Sketsa"), bukan garis isian. Hanya dipakai bila KEDUA ujung memenuhi, agar aman.
 function isBoxEdge(gray, w, h, ln, u) {
   const reach = Math.round(30 * u);
   const near = Math.max(1, Math.round(2 * u));
@@ -334,9 +292,6 @@ function isBoxEdge(gray, w, h, ln, u) {
   return verticalAt(Math.round(ln.x0)) && verticalAt(Math.round(ln.x1));
 }
 
-// Gabungkan potongan garis yang sebaris dan berdekatan (rantai titik + garis menyatu).
-// Toleransi y dihitung terhadap potongan terakhir pada garis, sehingga garis yang
-// sedikit miring (umum pada gambar AI/scan) tetap tersambung.
 function mergeCollinear(lines, o, u, gray, w, h) {
   const frags = [...lines].sort((a, b) => a.x0 - b.x0);
   const open = [];
@@ -377,9 +332,6 @@ function mergeCollinear(lines, o, u, gray, w, h) {
     .sort((a, b) => a.y - b.y || a.x0 - b.x0);
 }
 
-/**
- * Garis -> kotak isian dalam PERSEN halaman (format peta_field_json).
- */
 export function linesToFields(lines, width, height, options = {}) {
   const o = { ...DOTTED_DEFAULTS, ...options };
   const u = width / 1190;
@@ -391,7 +343,6 @@ export function linesToFields(lines, width, height, options = {}) {
     const x0 = Math.max(0, ln.x0 - o.padX * u);
     const x1 = Math.min(width, ln.x1 + o.padX * u);
 
-    // Jangan menimpa garis di atasnya yang sekolom (isian bertumpuk, mis. Nama/Kelas/Kelompok).
     for (let j = 0; j < i; j++) {
       const up = lines[j];
       if (up.y >= ln.y) continue;

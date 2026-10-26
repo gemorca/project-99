@@ -30,7 +30,7 @@ export function renderMateriView(ptmId) {
           </div>
 
           ${m.isi_teks ? `<p class="text-slate-700 leading-relaxed font-medium whitespace-pre-line">${m.isi_teks}</p>` : ''}
-          
+
           ${m.tipe_media === 'pdf_document' && m.file_pdf_url
             ? `
             <div class="space-y-2 mt-2">
@@ -53,13 +53,11 @@ export function renderMateriView(ptmId) {
             : ''
           }
 
-          <!-- BLOK ULASAN & RATING -->
           <div class="pt-4 border-t space-y-3">
             <h4 class="font-black text-brand-navy text-xs flex items-center gap-1">
               <span>💬 Ulasan & Rating Siswa</span>
             </h4>
 
-            <!-- Form Penulisan Ulasan -->
             <div class="p-3 bg-slate-50 border rounded-2xl space-y-2">
               <span class="font-bold text-slate-700 block text-[11px]">Beri Penilaian Bahan Ajar Ini:</span>
               <div class="flex items-center gap-2">
@@ -79,7 +77,6 @@ export function renderMateriView(ptmId) {
               </div>
             </div>
 
-            <!-- Daftar Komentar Masuk -->
             <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
               ${mReviews.length === 0
                 ? `<p class="text-slate-400 italic text-[11px] text-center py-2">Belum ada ulasan untuk materi ini. Jadilah yang pertama memberikan penilaian!</p>`

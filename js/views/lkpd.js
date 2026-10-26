@@ -39,7 +39,6 @@ export function renderLkpdView(ptmId) {
 
   return `
     <div class="max-w-4xl mx-auto space-y-4 text-xs">
-      <!-- Header LKPD -->
       <div class="bg-white p-5 rounded-3xl border shadow-sm space-y-3">
         <div class="flex items-center justify-between border-b pb-2">
           <h3 class="font-black text-brand-navy text-sm font-heading">${lkpdObj.judul_lkpd}</h3>
@@ -50,7 +49,6 @@ export function renderLkpdView(ptmId) {
         <p class="text-slate-600 font-medium leading-relaxed">${lkpdObj.instruksi}</p>
       </div>
 
-      <!-- Video Bahan Ajar (YouTube) -->
       ${videoEmbedUrl
       ? `
       <div class="bg-white p-5 rounded-3xl border shadow-sm space-y-2">
@@ -63,7 +61,6 @@ export function renderLkpdView(ptmId) {
       : ''
     }
 
-      <!-- KONDISI A: LKPD Tipe PDF Overlay -->
       ${isPdfLkpd
       ? hasPdfOverlay
         ? `
@@ -96,7 +93,6 @@ export function renderLkpdView(ptmId) {
       : ''
     }
 
-      <!-- KONDISI B: LKPD Tipe Manual -->
       ${!isPdfLkpd && isiTeks
       ? `
         <div class="bg-white p-5 rounded-3xl border shadow-sm space-y-3">

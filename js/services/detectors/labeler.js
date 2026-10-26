@@ -1,39 +1,17 @@
-/**
- * Pelabelan kotak hasil deteksi dari teks OCR (Tahap 4).
- *
- * Murni fungsi (tanpa DOM, tanpa Tesseract), jadi bisa diuji di Node.
- *
- * Masukan:
- *  - fields: kotak dalam PERSEN halaman, boleh membawa { source, grid:{table,row,col} }
- *  - words : kata hasil OCR dalam PIKSEL gambar: { text, x0, y0, x1, y1, conf }
- *
- * Aturan label (berurutan, berhenti pada yang pertama cocok):
- *  1. Sel tabel (grid lebih dari 1 kolom): "Tabel T baris R <header kolom>".
- *     Header = teks di atas baris pertama tabel yang sejajar kolom. Tanpa header: "... kolom C".
- *  2. Teks di sebelah kiri pada baris yang sama ("Nama :" -> "Nama").
- *  3. Judul tepat di atas kotak ("Jawaban :", "Sketsa Rancangan").
- *     Judul "Jawaban" diberi nomor soal bila ada angka di kiri-atas ("Jawaban soal 2").
- *  4. Gagal: label tetap kosong, editor memakai "Field N".
- * Label kembar pada satu halaman diberi akhiran angka.
- *
- * Semua jarak dalam satuan u = lebar_gambar / 1190.
- */
-
 export const LABEL_DEFAULTS = {
-  minConf: 50, // keyakinan OCR minimum per kata (0-100)
-  lineGap: 30, // celah horizontal yang memisahkan dua segmen teks sebaris (u)
-  leftReach: 200, // jarak maksimum teks kiri ke kotak (u)
-  leftSlack: 8, // teks kiri boleh menjorok ke kotak sejauh ini (u)
-  headerReach: 70, // jarak maksimum header kolom di atas tabel (u)
-  titleReach: 45, // jarak maksimum judul di atas kotak (u)
-  numberReach: 450, // jarak maksimum nomor soal di atas kotak (u)
-  maxWords: 5, // jumlah kata maksimum dalam label
+  minConf: 50,
+  lineGap: 30,
+  leftReach: 200,
+  leftSlack: 8,
+  headerReach: 70,
+  titleReach: 45,
+  numberReach: 450,
+  maxWords: 5,
   maxChars: 40
 };
 
 const isJunk = (t) => !/[A-Za-z0-9]{2,}|^\d$/.test(t);
 
-/** Kata -> segmen teks (satu baris, dipisah bila celah > lineGap). */
 export function buildLines(words, width, options = {}) {
   const o = { ...LABEL_DEFAULTS, ...options };
   const u = width / 1190;
@@ -83,7 +61,6 @@ export function cleanLabel(text, o = LABEL_DEFAULTS) {
     .replace(/\s+/g, ' ')
     .trim();
   let parts = t.split(' ');
-  // Buang penanda daftar / ikon di depan ("a.", "it", "@") dan kata huruf kecil sebelum kata berkapital.
   while (parts.length > 1) {
     const hasCapLater = parts.slice(1).some((q) => /^[A-Z]/.test(q));
     if ((parts[0].length <= 2 && !/^\d+$/.test(parts[0])) || (/^[a-z]/.test(parts[0]) && hasCapLater)) parts.shift();
@@ -92,7 +69,6 @@ export function cleanLabel(text, o = LABEL_DEFAULTS) {
   t = parts.join(' ');
   if (parts.length > o.maxWords) t = parts.slice(0, o.maxWords).join(' ');
   if (t.length > o.maxChars) t = t.slice(0, o.maxChars).trim();
-  // Tolak sampah OCR (ikon, garis): harus ada kata >= 3 huruf dan sebagian besar karakter huruf/angka.
   const compact = t.replace(/\s/g, '');
   const alnum = (compact.match(/[A-Za-z0-9]/g) || []).length;
   const hasWord = /[A-Za-z]{3,}/.test(t) || /^\d{1,2}$/.test(t);
@@ -110,7 +86,7 @@ function tableLabels(fields, pxBoxes, lines, o, u) {
   const out = new Map();
   byTable.forEach((idxs, t) => {
     const cols = new Set(idxs.map((i) => fields[i].grid.col));
-    if (cols.size < 2) return; // satu kolom saja = daftar kotak, bukan tabel
+    if (cols.size < 2) return;
     const top = Math.min(...idxs.map((i) => pxBoxes[i].y0));
     idxs.forEach((i) => {
       const b = pxBoxes[i];
@@ -131,11 +107,6 @@ function tableLabels(fields, pxBoxes, lines, o, u) {
   return out;
 }
 
-/**
- * @param {Array} fields kotak dalam persen halaman
- * @param {Array} words  kata OCR dalam piksel
- * @returns {Array} salinan fields dengan label terisi bila ditemukan
- */
 export function assignLabels(fields, words, width, height, options = {}) {
   const o = { ...LABEL_DEFAULTS, ...options };
   const u = width / 1190;
@@ -160,15 +131,12 @@ export function assignLabels(fields, words, width, height, options = {}) {
     }
     const b = px[i];
 
-    // 2. teks di kiri, satu baris dengan kotak
     const left = lines
       .filter((l) => l.cy >= b.y0 && l.cy <= b.y1 && l.x1 <= b.x0 + o.leftSlack * u && b.x0 - l.x1 <= o.leftReach * u)
       .sort((a, c) => a.cy - c.cy);
     if (left.length) {
       const raw = left.map((l) => l.text).join(' ');
       let lab = cleanLabel(raw, o);
-      // Kotak garis titik: label harus berkapital di depan, dan pendek atau berakhir ":".
-      // Teks kalimat yang terpotong baris (pertanyaan panjang) bukan label.
       if (lab && f.source !== 'table-cell') {
         const short = lab.split(' ').length <= 4 || /:\s*$/.test(raw);
         if (!/^[A-Z0-9]/.test(lab) || !short) lab = '';
@@ -179,7 +147,6 @@ export function assignLabels(fields, words, width, height, options = {}) {
       }
     }
 
-    // 3. judul tepat di atas kotak
     const above = lines
       .filter((l) => l.cy <= b.y0 + 2 * u && b.y0 - l.cy <= o.titleReach * u && l.x0 >= b.x0 - 10 * u && l.x0 <= b.x0 + 0.5 * (b.x1 - b.x0))
       .sort((a, c) => c.cy - a.cy)[0];
@@ -199,7 +166,6 @@ export function assignLabels(fields, words, width, height, options = {}) {
     }
   });
 
-  // Label kembar -> beri nomor urut.
   const seen = new Map();
   out.forEach((f) => {
     if (!f.label) return;

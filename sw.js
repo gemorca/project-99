@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v8';
+const CACHE_VERSION = 'v10';
 const SHELL_CACHE = `elkpd-steam-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `elkpd-steam-runtime-${CACHE_VERSION}`;
 const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwdT3NG-OjarK8__bzrr1LAMWyFY5OT3Bv4KVjGUjF7V3UaMsiofZ1EDlHEaqhsSFaxCg/exec';
@@ -50,7 +50,6 @@ const SHELL_ASSETS = [
     './js/views/steam-lab.js'
 ];
 
-// Host CDN yang aman di-cache untuk offline (library statis + font)
 const CDN_HOSTS = [
     'cdn.tailwindcss.com',
     'cdn.jsdelivr.net',
@@ -89,13 +88,11 @@ self.addEventListener('fetch', (event) => {
 
     const url = new URL(req.url);
 
-    // Jangan sentuh API Google Apps Script & proxy PDF: harus selalu live
     if (req.url.startsWith(GAS_API_URL) || url.hostname === 'script.google.com' ||
         url.hostname === 'script.googleusercontent.com' ||
         url.hostname === 'drive.google.com' || url.hostname === 'api.allorigins.win' ||
         url.hostname === 'corsproxy.io') return;
 
-    // Navigasi halaman: network-first, fallback ke index.html cache
     if (req.mode === 'navigate') {
         event.respondWith(
             fetch(req)
@@ -112,7 +109,6 @@ self.addEventListener('fetch', (event) => {
     const sameOrigin = url.origin === self.location.origin;
     if (!sameOrigin && !CDN_HOSTS.includes(url.hostname)) return;
 
-    // Aset lain: stale-while-revalidate
     event.respondWith(
         caches.match(req).then((cached) => {
             const network = fetch(req)
