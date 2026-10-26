@@ -26,6 +26,7 @@ export function renderEvaluasiView(ptmId) {
   const existingSub = (state.cachedData.submissions || []).find((s) =>
     String(s.username_siswa || '').trim().toLowerCase() === String(username).trim().toLowerCase() &&
     String(s.id_pertemuan || '').trim() === String(ptmId).trim() &&
+    String(s.id_game || '').trim() === String(evalObj.id_evaluasi).trim() &&
     String(s.tipe_sub || '').trim().toLowerCase() === 'evaluasi'
   );
 

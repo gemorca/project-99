@@ -164,6 +164,8 @@ export function renderGuruSoalView(container) {
             : evalList.map((ev) => {
                 const ptmObj = ptmList.find((p) => String(p.id_pertemuan) === String(ev.id_pertemuan));
                 const labelPertemuan = ptmObj ? `Pertemuan ${ptmObj.nomor_pertemuan}` : 'Pertemuan -';
+                const jumlahSoal = soalList.filter((s) => String(s.id_evaluasi) === String(ev.id_evaluasi)).length;
+                const isDraft = String(ev.status || '').trim() === 'Draft';
 
                 return `
                   <div class="bg-white p-4 rounded-3xl border flex items-center justify-between shadow-xs">
@@ -175,12 +177,23 @@ export function renderGuruSoalView(container) {
                         <span class="px-2.5 py-0.5 bg-blue-50 text-brand-blue font-bold text-[10px] rounded-full border border-blue-200">
                           ⏳ Durasi: ${ev.durasi_menit || 30} Menit
                         </span>
+                        <span class="px-2.5 py-0.5 bg-slate-50 text-slate-600 font-bold text-[10px] rounded-full border border-slate-200">
+                          📝 ${jumlahSoal} Soal
+                        </span>
+                        <span class="px-2.5 py-0.5 font-bold text-[10px] rounded-full border ${isDraft ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}">
+                          ${isDraft ? 'Draft' : 'Publish'}
+                        </span>
                       </div>
                       <h4 class="font-black text-brand-navy mt-1.5 text-xs">${ev.judul_evaluasi}</h4>
                     </div>
-                    <button onclick="openEvaluasiModal('${ev.id_evaluasi}')" class="px-3 py-1.5 bg-amber-100 text-amber-800 rounded-xl font-bold hover:bg-amber-200 transition text-[11px] shrink-0 ml-2">
-                      Edit Durasi ⏱️
-                    </button>
+                    <div class="flex flex-col gap-1.5 shrink-0 ml-2">
+                      <button onclick="openEvaluasiModal('${ev.id_evaluasi}')" class="px-3 py-1.5 bg-amber-100 text-amber-800 rounded-xl font-bold hover:bg-amber-200 transition text-[11px]">
+                        Edit ✏️
+                      </button>
+                      <button onclick="deleteEvaluasi('${ev.id_evaluasi}')" class="px-3 py-1.5 bg-red-100 text-red-700 rounded-xl font-bold hover:bg-red-200 transition text-[11px]">
+                        Hapus 🗑️
+                      </button>
+                    </div>
                   </div>
                 `;
               }).join('')
@@ -1253,6 +1266,30 @@ export function deleteSoal(id) {
   });
 }
 
+export function deleteEvaluasi(id) {
+  const jumlahSoal = (state.cachedData.soal_evaluasi || []).filter((s) => String(s.id_evaluasi) === String(id)).length;
+  const jumlahNilai = (state.cachedData.submissions || []).filter(
+    (s) => String(s.tipe_sub || '').toLowerCase() === 'evaluasi' && String(s.id_game) === String(id)
+  ).length;
+
+  showConfirm(
+    'Hapus Modul Evaluasi?',
+    `${jumlahSoal} soal di modul ini ikut terhapus. ${jumlahNilai} nilai siswa tetap tersimpan.`,
+    async () => {
+      showLoading('Menghapus modul evaluasi...');
+      const res = await apiPost({ action: 'delete_evaluasi', id_evaluasi: id });
+      closeLoading();
+      if (res.success) {
+        showToast('success', res.message);
+        await fetchAllInitialData(true);
+        switchView('guru-soal');
+      } else {
+        Swal.fire({ icon: 'error', title: 'Gagal Menghapus Modul', text: res.message });
+      }
+    }
+  );
+}
+
 export function openKoreksiModal(idSub) {
   const sub = (state.cachedData.submissions || []).find((s) => String(s.id_sub) === String(idSub));
   if (!sub) return;
@@ -1473,5 +1510,6 @@ window.openKoreksiModal = openKoreksiModal;
 window.closeKoreksiModal = closeKoreksiModal;
 window.handleGradeSubmit = handleGradeSubmit;
 window.openEvaluasiModal = openEvaluasiModal;
+window.deleteEvaluasi = deleteEvaluasi;
 window.closeEvaluasiModal = closeEvaluasiModal;
 window.handleEvaluasiSubmit = handleEvaluasiSubmit;
