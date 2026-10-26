@@ -8,8 +8,8 @@
  *
  * Detektor terpasang:
  *  - Tahap 2: 'dotted-lines' (garis titik-titik dan garis isian abu-abu), lihat detectors/dotted-lines.js
+ *  - Tahap 3: 'table-cells' (sel tabel kosong dan kotak jawaban), lihat detectors/table-cells.js
  * Menyusul:
- *  - Tahap 3: registerDetector('table-cells', ...)
  *  - Tahap 4: pelabelan via OCR
  *
  * Kontrak detektor:
@@ -18,7 +18,8 @@
  *   x, y, w, h dalam PERSEN halaman (0-100), sama seperti peta_field_json.
  */
 
-import { dottedLinesDetector } from './detectors/dotted-lines.js';
+import { dottedLinesDetector, detectDottedLines } from './detectors/dotted-lines.js';
+import { tableCellsDetector } from './detectors/table-cells.js';
 
 const DEBUG_KEY = 'ELKPD_DEBUG_DETECT';
 const detectors = [];
@@ -39,6 +40,7 @@ function isDebugOn() {
 }
 
 registerDetector('dotted-lines', dottedLinesDetector);
+registerDetector('table-cells', tableCellsDetector); // harus setelah dotted-lines: memakai garis titik untuk membersihkan isi sel
 
 // Detektor uji: satu kotak per halaman. Aktif bila localStorage.ELKPD_DEBUG_DETECT = '1'.
 // Dipakai untuk memastikan alur render -> deteksi -> gabung -> tampil sudah benar.
@@ -88,16 +90,32 @@ export function normalizeDetections(rawList) {
     const nh = clamp(h, 0, 100 - ny);
     if (nw < 1 || nh < 0.8) return;
 
-    out.push({
+    const item = {
       x: nx,
       y: ny,
       w: nw,
       h: nh,
       type: r.type === 'textarea' ? 'textarea' : 'text',
       label: r.label ? String(r.label).trim() : ''
-    });
+    };
+    if (r.source) item.source = String(r.source); // dipakai Tahap 4-5
+    if (r.grid) item.grid = r.grid; // { table, row, col } untuk pelabelan tabel
+    out.push(item);
   });
   return out;
+}
+
+// Garis titik yang jatuh di dalam sel/kotak terdeteksi tidak perlu jadi kotak sendiri:
+// sel yang lebih besar sudah menjadi area menulis. (Penggabungan menyeluruh: Tahap 5.)
+export function dropLinesInsideCells(list) {
+  const cells = list.filter((f) => f.source === 'table-cell');
+  if (!cells.length) return list;
+  return list.filter((f) => {
+    if (f.source !== 'dotted-line') return true;
+    const cx = f.x + f.w / 2;
+    const cy = f.y + f.h / 2;
+    return !cells.some((c) => cx >= c.x && cx <= c.x + c.w && cy >= c.y && cy <= c.y + c.h);
+  });
 }
 
 export async function detectPage(pdfDoc, pageNum, opts = {}) {
@@ -107,12 +125,16 @@ export async function detectPage(pdfDoc, pageNum, opts = {}) {
 
   const canvas = await renderPageToCanvas(pdfDoc, pageNum, opts.scale || 2);
   try {
+    let imageData = null;
+    let dottedLines = null;
     const ctx = {
       pageNum,
       width: canvas.width,
       height: canvas.height,
       canvas,
-      getImageData: () => canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height)
+      // Dimemoisasi: beberapa detektor memakai data piksel dan garis titik yang sama.
+      getImageData: () => imageData || (imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height)),
+      getDottedLines: () => dottedLines || (dottedLines = detectDottedLines(ctx.getImageData()))
     };
 
     let all = [];
@@ -124,7 +146,7 @@ export async function detectPage(pdfDoc, pageNum, opts = {}) {
         console.warn(`[auto-detect] detektor "${d.name}" gagal di halaman ${pageNum}:`, err);
       }
     }
-    return normalizeDetections(all);
+    return dropLinesInsideCells(normalizeDetections(all));
   } finally {
     releaseCanvas(canvas);
   }

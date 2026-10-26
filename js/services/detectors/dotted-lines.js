@@ -415,7 +415,6 @@ export function linesToFields(lines, width, height, options = {}) {
 }
 
 export async function dottedLinesDetector(ctx) {
-  const img = ctx.getImageData();
-  const lines = detectDottedLines(img);
+  const lines = ctx.getDottedLines ? ctx.getDottedLines() : detectDottedLines(ctx.getImageData());
   return linesToFields(lines, ctx.width, ctx.height);
 }
