@@ -30,6 +30,7 @@ const SHELL_ASSETS = [
     './js/games/word-search.js',
     './js/services/api.js',
     './js/services/auto-detect.js',
+    './js/services/detectors/dotted-lines.js',
     './js/services/idb.js',
     './js/services/pwa-install.js',
     './js/services/ocr.js',

@@ -1,13 +1,14 @@
 /**
  * Kerangka Deteksi Otomatis Field LKPD (Tahap 1)
  *
- * Tahap 1 hanya menyediakan:
+ * Tahap 1 menyediakan kerangka:
  *  - render halaman PDF ke canvas offscreen beresolusi tinggi,
  *  - registry detektor (plug-in),
  *  - normalisasi hasil ke format peta_field_json (persen 0-100).
  *
- * Detektor sesungguhnya dipasang pada tahap berikutnya:
- *  - Tahap 2: registerDetector('dotted-lines', ...)
+ * Detektor terpasang:
+ *  - Tahap 2: 'dotted-lines' (garis titik-titik dan garis isian abu-abu), lihat detectors/dotted-lines.js
+ * Menyusul:
  *  - Tahap 3: registerDetector('table-cells', ...)
  *  - Tahap 4: pelabelan via OCR
  *
@@ -16,6 +17,8 @@
  *   ctx = { pageNum, width, height, canvas, getImageData() }
  *   x, y, w, h dalam PERSEN halaman (0-100), sama seperti peta_field_json.
  */
+
+import { dottedLinesDetector } from './detectors/dotted-lines.js';
 
 const DEBUG_KEY = 'ELKPD_DEBUG_DETECT';
 const detectors = [];
@@ -34,6 +37,8 @@ function isDebugOn() {
     return false;
   }
 }
+
+registerDetector('dotted-lines', dottedLinesDetector);
 
 // Detektor uji: satu kotak per halaman. Aktif bila localStorage.ELKPD_DEBUG_DETECT = '1'.
 // Dipakai untuk memastikan alur render -> deteksi -> gabung -> tampil sudah benar.
