@@ -1,7 +1,7 @@
-const CACHE_VERSION = 'v15';
+const CACHE_VERSION = 'v16';
 const SHELL_CACHE = `elkpd-steam-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `elkpd-steam-runtime-${CACHE_VERSION}`;
-const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwvxD5okVdgp4tiUddWN31-7ypZM_OTJsWuUk1TSI5RFR5jnP78S9_2Jssh6e6E6mOPVw/exec';
+const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzP0pPnay3y4cBBaQNdSRmTbFPp04kYc0XsW6xiKw5wsxwrhDke4KxpjJRsOec9i2ZCCw/exec';
 
 const SHELL_ASSETS = [
     './',

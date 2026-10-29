@@ -26,6 +26,7 @@ import './views/admin.js';
 import './views/guru.js';
 
 import { switchView } from './components/drawer.js';
+import { fetchAllInitialData } from './services/api.js';
 import { isEvaluasiBerlangsung } from './views/evaluasi.js';
 import { performAutoLogout, updateUIForAuthenticatedUser } from './components/modal.js';
 import { initGlobalClickFeedback, updateSoundToggleUI } from './components/sound.js';
@@ -39,10 +40,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   const savedSession = loadSessionState();
   const now = Date.now();
 
-  if (savedSession && (now - savedSession.lastActivity < IDLE_TIMEOUT_MS)) {
+  if (savedSession && savedSession.token && (now - savedSession.lastActivity < IDLE_TIMEOUT_MS)) {
     state.currentUser = savedSession.user;
+    state.authToken = savedSession.token;
     state.lastActivity = savedSession.lastActivity;
     updateUIForAuthenticatedUser();
+    await fetchAllInitialData(true);
     await switchView(savedSession.view || 'home', savedSession.paramId || null);
   } else {
     clearSessionState();

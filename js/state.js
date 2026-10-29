@@ -3,6 +3,7 @@ export const IDLE_TIMEOUT_MS = 15 * 60 * 1000;
 
 export const state = {
   currentUser: null,
+  authToken: null,
   currentView: 'home',
   activePertemuanId: null,
   lastActivity: Date.now(),
@@ -54,6 +55,7 @@ export function saveSessionState() {
   }
   const snapshot = {
     user: state.currentUser,
+    token: state.authToken || null,
     view: state.currentView,
     paramId: state.activePertemuanId,
     lastActivity: state.lastActivity || Date.now()

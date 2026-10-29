@@ -1,10 +1,57 @@
 import { renderSidebarNav, switchView } from '../components/drawer.js';
-import { closeLoading, showLoading, showToast } from '../components/modal.js';
+import { closeLoading, showLoading, showToast, updateUIForAuthenticatedUser } from '../components/modal.js';
 import { CACHE_KEY, GAS_API_URL } from '../config.js';
 import { getIDBCache, saveToOutboxQueue, setIDBCache } from '../services/idb.js';
 import { registerServiceWorkerAndSync, triggerOutboxFlushManual } from '../services/sw-register.js';
-import { state } from '../state.js';
+import { clearSessionState, state } from '../state.js';
 import { escapeHtml } from '../services/html.js';
+
+function tokenQuery() {
+  return state.authToken ? `&token=${encodeURIComponent(state.authToken)}` : '';
+}
+
+export async function resetCachedData() {
+  state.cachedData = {
+    users: [],
+    kelas: [],
+    pertemuan: [],
+    materi: [],
+    lkpd: [],
+    games: [],
+    evaluasi: [],
+    soal_evaluasi: [],
+    submissions: [],
+    reviews: []
+  };
+  state.isDataLoaded = false;
+  try {
+    await setIDBCache(CACHE_KEY, null);
+  } catch (e) {
+    console.error('Gagal mengosongkan cache IndexedDB:', e);
+  }
+}
+
+let authExpiredHandling = false;
+export async function handleAuthExpired(message) {
+  if (authExpiredHandling) return;
+  authExpiredHandling = true;
+  try {
+    state.authToken = null;
+    state.currentUser = null;
+    clearSessionState();
+    const fm = document.getElementById('lkpd-field-map-modal');
+    if (fm) {
+      fm.classList.add('hidden');
+      fm.classList.remove('flex');
+    }
+    await resetCachedData();
+    updateUIForAuthenticatedUser();
+    switchView('home');
+    showToast('warning', message || 'Sesi berakhir. Silakan login ulang.');
+  } finally {
+    authExpiredHandling = false;
+  }
+}
 
 export async function loadFromLocalStorage() {
   try {
@@ -60,13 +107,19 @@ export async function retryLoadData() {
 
 export async function fetchDataFromNetwork() {
   try {
-    const res = await fetch(`${GAS_API_URL}?action=get_all_data`);
+    const res = await fetch(`${GAS_API_URL}?action=get_all_data${tokenQuery()}`);
     
     if (!res.ok) {
       throw new Error(`Server HTTP status: ${res.status}`);
     }
 
     const result = await res.json();
+
+    if (result && result.auth === true) {
+      await handleAuthExpired(result.message);
+      return false;
+    }
+
     const data = result.data || result;
 
     if (data && result.success !== false) {
@@ -100,8 +153,13 @@ export async function fetchDataFromNetwork() {
 export async function refreshSubmissionsData() {
   try {
     showLoading('Memperbarui data jawaban siswa...');
-    const res = await fetch(`${GAS_API_URL}?action=get_submissions`);
+    const res = await fetch(`${GAS_API_URL}?action=get_submissions${tokenQuery()}`);
     const result = await res.json();
+    if (result && result.auth === true) {
+      closeLoading();
+      await handleAuthExpired(result.message);
+      return;
+    }
     const data = result.data || result;
 
     if (Array.isArray(data)) {
@@ -127,6 +185,10 @@ export async function refreshSubmissionsData() {
 }
 
 export async function apiPost(payload) {
+  if (state.authToken && payload.action !== 'login') {
+    payload = { ...payload, token: state.authToken };
+  }
+
   const isSubmissionAction = ['submit_lkpd', 'submit_game', 'submit_lkpd_isian', 'save_review', 'submit_evaluasi'].includes(payload.action);
 
   if (isSubmissionAction) {
@@ -160,7 +222,11 @@ export async function apiPost(payload) {
       method: 'POST',
       body: JSON.stringify(payload)
     });
-    return await res.json();
+    const result = await res.json();
+    if (result && result.auth === true && payload.action !== 'login') {
+      handleAuthExpired(result.message);
+    }
+    return result;
   } catch (err) {
     console.error('API POST Error:', err);
     return {

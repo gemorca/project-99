@@ -93,6 +93,7 @@ function buildModal() {
         <button id="btn-accept-auto-guru" onclick="acceptAllAutoGuru()" class="hidden px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition">✅ Terima Semua Draf</button>
         <button id="btn-accept-page-auto-guru" onclick="acceptPageAutoGuru()" class="hidden px-3 py-2 bg-white border border-emerald-600 text-emerald-700 font-bold rounded-xl transition">✔ Terima Halaman Ini</button>
         <button id="btn-clear-auto-guru" onclick="clearAutoGuru()" class="hidden px-3 py-2 bg-white border border-amber-500 text-amber-700 font-bold rounded-xl transition">🗑️ Hapus Draf Auto</button>
+        <button id="btn-clear-page-fields-guru" onclick="clearPageFieldsGuru()" class="px-3 py-2 bg-white border border-red-400 text-red-700 font-bold rounded-xl hover:bg-red-50 transition disabled:opacity-40 disabled:cursor-not-allowed">🗑️ Hapus Semua Field Hal. 1</button>
         <div id="guru-selection-bar" class="hidden items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-xl px-2 py-1">
           <span class="text-[11px] font-bold text-blue-900 max-w-[9rem] truncate">Terpilih: <span id="guru-sel-label"></span></span>
           <button id="btn-accept-sel-guru" onclick="acceptGuruField()" class="hidden px-2 py-1.5 bg-emerald-600 text-white font-bold rounded-lg">✔ Terima</button>
@@ -423,6 +424,13 @@ function updateAutoButtons() {
   });
   const pageEl = document.getElementById('btn-accept-page-auto-guru');
   if (pageEl) pageEl.classList.toggle('hidden', !pageFields().some((f) => f.auto));
+
+  const clearEl = document.getElementById('btn-clear-page-fields-guru');
+  if (clearEl) {
+    const n = pageFields().length;
+    clearEl.textContent = `🗑️ Hapus Semua Field Hal. ${uiState.currentPageGuru}${n ? ` (${n})` : ''}`;
+    clearEl.disabled = n === 0;
+  }
 }
 
 function pctFromEvent(e, rect) {
@@ -691,6 +699,32 @@ export function deleteGuruField(fieldId) {
   if (uiState.selectedFieldGuru === id) uiState.selectedFieldGuru = null;
   markDirty();
   redrawGuruFieldBoxes();
+}
+
+export async function clearPageFieldsGuru() {
+  const page = uiState.currentPageGuru;
+  const n = pageFields(page).length;
+  if (n === 0) {
+    showToast('info', `Halaman ${page} tidak punya field.`);
+    return;
+  }
+
+  const r = await Swal.fire({
+    icon: 'warning',
+    title: `Hapus semua field di halaman ${page}?`,
+    text: `${n} field di halaman ${page} akan dihapus. Halaman lain tidak berubah. Perubahan baru tersimpan setelah klik "Simpan Peta Field".`,
+    showCancelButton: true,
+    confirmButtonText: 'Ya, hapus semua',
+    cancelButtonText: 'Batal',
+    confirmButtonColor: '#dc2626'
+  });
+  if (!r.isConfirmed) return;
+
+  uiState.fieldsByPageGuru[page] = [];
+  uiState.selectedFieldGuru = null;
+  markDirty();
+  redrawGuruFieldBoxes();
+  showToast('success', `${n} field di halaman ${page} dihapus. Klik Simpan Peta Field.`);
 }
 
 export function changeGuruFieldLabel(fieldId, newLabel) {
@@ -1058,6 +1092,7 @@ window.changeGuruPage = changeGuruPage;
 window.changeGuruFieldLabel = changeGuruFieldLabel;
 window.changeGuruFieldType = changeGuruFieldType;
 window.deleteGuruField = deleteGuruField;
+window.clearPageFieldsGuru = clearPageFieldsGuru;
 window.duplicateGuruField = duplicateGuruField;
 window.selectGuruField = selectGuruField;
 window.zoomGuru = zoomGuru;

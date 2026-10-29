@@ -1,6 +1,6 @@
 import { renderSidebarNav, switchView } from '../components/drawer.js';
 import { CACHE_KEY } from '../config.js';
-import { apiPost } from '../services/api.js';
+import { apiPost, resetCachedData } from '../services/api.js';
 import { playClick, playError, playSuccess, playWarning } from './sound.js';
 import { clearSessionState, saveSessionState, state } from '../state.js';
 import { escapeHtml, safeUrl } from '../services/html.js';
@@ -155,8 +155,10 @@ export async function handleLoginSubmit(e) {
 
   if (res.success) {
     state.currentUser = res.user;
+    state.authToken = res.token || null;
     state.lastActivity = Date.now();
     saveSessionState();
+    await resetCachedData();
 
     migrateGuestDrafts(res.user.username);
 
@@ -206,9 +208,11 @@ export function logout() {
   showConfirm(
     'Keluar Sistem?',
     'Kamu akan keluar dari akun saat ini.',
-    () => {
+    async () => {
       state.currentUser = null;
+      state.authToken = null;
       clearSessionState();
+      await resetCachedData();
       updateUIForAuthenticatedUser();
       switchView('home');
       showToast('success', 'Berhasil Keluar Akun');
@@ -217,9 +221,11 @@ export function logout() {
   );
 }
 
-export function performAutoLogout() {
+export async function performAutoLogout() {
   state.currentUser = null;
+  state.authToken = null;
   clearSessionState();
+  await resetCachedData();
   updateUIForAuthenticatedUser();
   switchView('home');
   showToast('warning', 'Sesi berakhir karena tidak ada aktivitas selama 15 menit.');
