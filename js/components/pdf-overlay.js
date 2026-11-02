@@ -250,6 +250,7 @@ export async function openLkpdFullscreenModal(ptmId, idLkpd) {
 
 export function closeLkpdFullscreenModal() {
   const modal = document.getElementById('lkpd-fullscreen-modal');
+  closeFieldSheet();
   const fsVals = readAnswers(document.getElementById('lkpd-fullscreen-content'));
   if (Object.keys(fsVals).length) {
     document.querySelectorAll('#desktop-lkpd-pages .lkpd-fill-input').forEach((el) => {
@@ -269,6 +270,7 @@ export async function drawLkpdFullscreenPages(containerEl) {
   if (!pdfDoc || !fieldMap) return;
 
   const prevVals = readAnswers(containerEl);
+  const useSheet = isMobileSheet();
   containerEl.innerHTML = '';
   const scrollBody = document.getElementById('lkpd-fullscreen-scroll-body');
   const viewportWidth = scrollBody.clientWidth - 24;
@@ -306,13 +308,27 @@ export async function drawLkpdFullscreenPages(containerEl) {
       if (f.type !== 'textarea') el.type = 'text';
       el.className = 'lkpd-fill-input';
       el.dataset.fieldId = f.id;
+      el.dataset.page = String(pageNum);
+      el.dataset.x = String(f.x);
+      el.dataset.y = String(f.y);
+      el.dataset.label = f.label || '';
       const fh = (f.h / 100) * viewport.height;
       el.placeholder = fh >= 22 ? (f.label || f.id) : '';
       el.title = f.label || f.id;
 
       el.value = prevVals[f.id] !== undefined ? prevVals[f.id] : (savedAnswers[f.id] || '');
 
-      el.oninput = () => saveLkpdOverlayDraft(idLkpd);
+      markFilled(el);
+      el.oninput = () => { markFilled(el); saveLkpdOverlayDraft(idLkpd); };
+
+      // HP: kolom kecil tidak diketik langsung; ketuk membuka sheet isian besar
+      if (useSheet) {
+        el.readOnly = true;
+        el.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          openFieldSheet(el);
+        });
+      }
 
       const calculatedFontSize = Math.max(Math.min(15, Math.round(fh * 0.6)), 8);
 
@@ -339,6 +355,217 @@ export async function drawLkpdFullscreenPages(containerEl) {
   if (/[?&]debug\b/.test(location.search)) {
     showToast('info', `Render PDF ${lastDpr}x (DPR perangkat ${window.devicePixelRatio || 1})`);
   }
+  // gambar ulang (zoom) saat sheet terbuka: sambungkan lagi ke kolom yang sama
+  if (sheet.el && sheet.el.classList.contains('open')) renderSheet(false);
+}
+
+
+// ===== Sheet isian untuk HP =====
+// Ketuk kolom kecil di PDF -> panel input besar (font 16px) di bawah layar,
+// dengan tombol Sebelumnya/Berikutnya. Nilai ditulis balik ke kolom overlay.
+const sheet = { el: null, input: null, area: null, label: null, meta: null, prev: null, next: null, fieldId: null, vvBound: false, timer: null };
+
+function isMobileSheet() {
+  return window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768;
+}
+
+function markFilled(el) {
+  el.classList.toggle('lkpd-field-filled', el.value.trim() !== '');
+}
+
+// urutan baca: halaman, baris (dari atas), lalu kiri ke kanan
+function getOrderedFields() {
+  const root = document.getElementById('lkpd-fullscreen-content');
+  const list = Array.from(root ? root.querySelectorAll('.lkpd-fill-input') : []);
+  const row = (el) => Math.round(Number(el.dataset.y) / 1.2);
+  return list.sort((a, b) =>
+    (Number(a.dataset.page) - Number(b.dataset.page)) ||
+    (row(a) - row(b)) ||
+    (Number(a.dataset.x) - Number(b.dataset.x))
+  );
+}
+
+function currentSheetTarget() {
+  if (!sheet.fieldId) return null;
+  return getOrderedFields().find((x) => x.dataset.fieldId === sheet.fieldId) || null;
+}
+
+function sheetLabelFor(el, pos) {
+  const raw = (el.dataset.label || '').trim();
+  const generic = !raw || raw === el.dataset.fieldId || /^field[\s_-]*\d+$/i.test(raw);
+  return generic ? `Halaman ${el.dataset.page} · isian ${pos + 1}` : raw;
+}
+
+function ensureSheet() {
+  if (sheet.el) return sheet.el;
+  const modal = document.getElementById('lkpd-fullscreen-modal');
+  const el = document.createElement('div');
+  el.className = 'lkpd-sheet';
+  el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-label', 'Isi jawaban');
+  el.innerHTML = `
+    <div class="lkpd-sheet-head">
+      <div class="lkpd-sheet-text">
+        <div class="lkpd-sheet-label"></div>
+        <div class="lkpd-sheet-meta"></div>
+      </div>
+      <button type="button" class="lkpd-sheet-close" aria-label="Tutup isian">✖</button>
+    </div>
+    <input type="text" class="lkpd-sheet-input" autocomplete="off" autocapitalize="sentences" enterkeyhint="next">
+    <textarea class="lkpd-sheet-input" rows="4" hidden></textarea>
+    <div class="lkpd-sheet-nav">
+      <button type="button" class="lkpd-sheet-btn prev">‹ Sebelumnya</button>
+      <button type="button" class="lkpd-sheet-btn next">Berikutnya ›</button>
+    </div>`;
+  modal.appendChild(el);
+
+  sheet.el = el;
+  sheet.label = el.querySelector('.lkpd-sheet-label');
+  sheet.meta = el.querySelector('.lkpd-sheet-meta');
+  sheet.input = el.querySelector('input.lkpd-sheet-input');
+  sheet.area = el.querySelector('textarea.lkpd-sheet-input');
+  sheet.prev = el.querySelector('.prev');
+  sheet.next = el.querySelector('.next');
+
+  // jaga keyboard tetap terbuka saat tombol disentuh
+  el.querySelectorAll('button').forEach((b) => b.addEventListener('pointerdown', (ev) => ev.preventDefault()));
+  el.querySelector('.lkpd-sheet-close').onclick = closeFieldSheet;
+  sheet.prev.onclick = () => stepFieldSheet(-1);
+  sheet.next.onclick = () => stepFieldSheet(1);
+
+  const onType = (ev) => {
+    const target = currentSheetTarget();
+    if (!target) return;
+    target.value = ev.target.value;
+    markFilled(target);
+    const ctx = uiState.currentActiveLkpdContext;
+    if (ctx) saveLkpdOverlayDraft(ctx.idLkpd);
+    updateSheetMeta();
+  };
+  sheet.input.addEventListener('input', onType);
+  sheet.area.addEventListener('input', onType);
+  sheet.input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      stepFieldSheet(1);
+    }
+  });
+  return el;
+}
+
+function updateSheetMeta() {
+  if (!sheet.el) return;
+  const list = getOrderedFields();
+  const pos = list.findIndex((x) => x.dataset.fieldId === sheet.fieldId);
+  const filled = list.filter((x) => x.value.trim() !== '').length;
+  sheet.meta.textContent = `Isian ${pos + 1}/${list.length} · terisi ${filled}`;
+}
+
+// sheet naik mengikuti keyboard; ruang kosong di bawah PDF supaya kolom terbawah bisa di-scroll ke atas sheet
+function layoutSheet() {
+  if (!sheet.el || !sheet.el.classList.contains('open')) return;
+  const vv = window.visualViewport;
+  const lift = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+  sheet.el.style.bottom = lift + 'px';
+  const content = document.getElementById('lkpd-fullscreen-content');
+  if (content) content.style.paddingBottom = (sheet.el.offsetHeight + lift + 16) + 'px';
+}
+
+function scrollFieldIntoView(el) {
+  const body = document.getElementById('lkpd-fullscreen-scroll-body');
+  if (!body || !sheet.el) return;
+  const br = body.getBoundingClientRect();
+  const sr = sheet.el.getBoundingClientRect();
+  const er = el.getBoundingClientRect();
+  const visibleBottom = Math.min(br.bottom, sr.top);
+  const centerY = (br.top + visibleBottom) / 2;
+  const centerX = (br.left + br.right) / 2;
+  body.scrollTo({
+    top: body.scrollTop + (er.top + er.height / 2 - centerY),
+    left: body.scrollLeft + (er.left + er.width / 2 - centerX),
+    behavior: 'smooth'
+  });
+}
+
+function bindViewport() {
+  if (sheet.vvBound || !window.visualViewport) return;
+  sheet.vvBound = true;
+  const onVV = () => {
+    layoutSheet();
+    clearTimeout(sheet.timer);
+    sheet.timer = setTimeout(() => {
+      const el = currentSheetTarget();
+      if (el) scrollFieldIntoView(el);
+    }, 120);
+  };
+  window.visualViewport.addEventListener('resize', onVV);
+  window.visualViewport.addEventListener('scroll', onVV);
+}
+
+function renderSheet(focus) {
+  const list = getOrderedFields();
+  const pos = list.findIndex((x) => x.dataset.fieldId === sheet.fieldId);
+  if (pos < 0) {
+    closeFieldSheet();
+    return;
+  }
+  const el = list[pos];
+  list.forEach((x) => x.classList.remove('lkpd-field-active'));
+  el.classList.add('lkpd-field-active');
+
+  const multi = el.tagName === 'TEXTAREA';
+  const field = multi ? sheet.area : sheet.input;
+  sheet.input.hidden = multi;
+  sheet.area.hidden = !multi;
+  field.value = el.value;
+  field.placeholder = 'Ketik jawaban di sini…';
+
+  const last = pos === list.length - 1;
+  sheet.label.textContent = sheetLabelFor(el, pos);
+  sheet.prev.disabled = pos === 0;
+  sheet.next.textContent = last ? 'Selesai ✓' : 'Berikutnya ›';
+  sheet.input.setAttribute('enterkeyhint', last ? 'done' : 'next');
+  updateSheetMeta();
+
+  if (focus) field.focus({ preventScroll: true });
+  layoutSheet();
+  scrollFieldIntoView(el);
+}
+
+function openFieldSheet(el) {
+  ensureSheet();
+  sheet.fieldId = el.dataset.fieldId;
+  sheet.el.classList.add('open');
+  const fab = document.getElementById('btn-floating-save-lkpd');
+  if (fab && fab.parentElement) fab.parentElement.style.display = 'none';
+  bindViewport();
+  renderSheet(true);
+}
+
+function stepFieldSheet(dir) {
+  const list = getOrderedFields();
+  const pos = list.findIndex((x) => x.dataset.fieldId === sheet.fieldId);
+  const nextPos = pos + dir;
+  if (nextPos < 0) return;
+  if (nextPos >= list.length) {
+    closeFieldSheet();
+    return;
+  }
+  sheet.fieldId = list[nextPos].dataset.fieldId;
+  renderSheet(true);
+}
+
+export function closeFieldSheet() {
+  if (!sheet.el) return;
+  sheet.el.classList.remove('open');
+  sheet.fieldId = null;
+  sheet.input.blur();
+  sheet.area.blur();
+  document.querySelectorAll('#lkpd-fullscreen-content .lkpd-field-active').forEach((x) => x.classList.remove('lkpd-field-active'));
+  const content = document.getElementById('lkpd-fullscreen-content');
+  if (content) content.style.paddingBottom = '';
+  const fab = document.getElementById('btn-floating-save-lkpd');
+  if (fab && fab.parentElement) fab.parentElement.style.display = '';
 }
 
 export function setLkpdZoomMode(mode) {
@@ -426,5 +653,6 @@ export function clearLkpdOverlayDraft(idLkpd) {
 
 window.openLkpdFullscreenModal = openLkpdFullscreenModal;
 window.closeLkpdFullscreenModal = closeLkpdFullscreenModal;
+window.closeFieldSheet = closeFieldSheet;
 window.setLkpdZoomMode = setLkpdZoomMode;
 window.changeLkpdZoom = changeLkpdZoom;
