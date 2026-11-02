@@ -30,6 +30,7 @@ async function renderPageSharp(page, canvas, viewport) {
     viewport,
     transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null
   }).promise;
+  return dpr;
 }
 
 function readAnswers(root) {
@@ -135,6 +136,7 @@ export async function renderDesktopInlinePdfPages(containerWrap, pdfDoc, fieldMa
   const availableWidth = Math.max(containerWrap.clientWidth || 750, 600);
   const renderScale = Math.min(Math.max(availableWidth / naturalViewport.width, 0.8), fieldMap.renderScale || 1.4);
 
+  let lastDpr = 1;
   for (let pageNum = 1; pageNum <= fieldMap.totalPages; pageNum++) {
     const page = await pdfDoc.getPage(pageNum);
     const viewport = page.getViewport({ scale: renderScale });
@@ -147,7 +149,7 @@ export async function renderDesktopInlinePdfPages(containerWrap, pdfDoc, fieldMa
 
     const canvas = document.createElement('canvas');
     pageWrap.appendChild(canvas);
-    await renderPageSharp(page, canvas, viewport);
+    lastDpr = await renderPageSharp(page, canvas, viewport);
 
     const fields = fieldMap.fields[pageNum] || [];
     fields.forEach((f) => {
@@ -155,13 +157,14 @@ export async function renderDesktopInlinePdfPages(containerWrap, pdfDoc, fieldMa
       if (f.type !== 'textarea') el.type = 'text';
       el.className = 'lkpd-fill-input';
       el.dataset.fieldId = f.id;
-      el.placeholder = f.label || f.id;
+      const fh = (f.h / 100) * viewport.height;
+      el.placeholder = fh >= 22 ? (f.label || f.id) : '';
       el.title = f.label || f.id;
       el.value = savedAnswers[f.id] || '';
 
       el.oninput = () => saveLkpdOverlayDraft(idLkpd);
 
-      const calculatedFontSize = Math.max(Math.min(14, Math.round(11 * renderScale)), 10);
+      const calculatedFontSize = Math.max(Math.min(15, Math.round(fh * 0.6)), 8);
 
       Object.assign(el.style, {
         position: 'absolute',
@@ -173,7 +176,7 @@ export async function renderDesktopInlinePdfPages(containerWrap, pdfDoc, fieldMa
         background: 'rgba(255, 255, 255, 0.92)',
         fontFamily: 'inherit',
         fontSize: calculatedFontSize + 'px',
-        padding: '3px 6px',
+        padding: fh < 22 ? '0 4px' : '3px 6px',
         borderRadius: '6px',
         boxSizing: 'border-box'
       });
@@ -283,6 +286,7 @@ export async function drawLkpdFullscreenPages(containerEl) {
 
   document.getElementById('lkpd-zoom-text').textContent = `${Math.round((renderScale / (viewportWidth / naturalViewport.width)) * 100)}%`;
 
+  let lastDpr = 1;
   for (let pageNum = 1; pageNum <= fieldMap.totalPages; pageNum++) {
     const page = await pdfDoc.getPage(pageNum);
     const viewport = page.getViewport({ scale: renderScale });
@@ -294,7 +298,7 @@ export async function drawLkpdFullscreenPages(containerEl) {
 
     const canvas = document.createElement('canvas');
     pageWrap.appendChild(canvas);
-    await renderPageSharp(page, canvas, viewport);
+    lastDpr = await renderPageSharp(page, canvas, viewport);
 
     const fields = fieldMap.fields[pageNum] || [];
     fields.forEach((f) => {
@@ -302,14 +306,15 @@ export async function drawLkpdFullscreenPages(containerEl) {
       if (f.type !== 'textarea') el.type = 'text';
       el.className = 'lkpd-fill-input';
       el.dataset.fieldId = f.id;
-      el.placeholder = f.label || f.id;
+      const fh = (f.h / 100) * viewport.height;
+      el.placeholder = fh >= 22 ? (f.label || f.id) : '';
       el.title = f.label || f.id;
 
       el.value = prevVals[f.id] !== undefined ? prevVals[f.id] : (savedAnswers[f.id] || '');
 
       el.oninput = () => saveLkpdOverlayDraft(idLkpd);
 
-      const calculatedFontSize = Math.max(Math.min(15, Math.round(12 * (renderScale / 1.2))), 10);
+      const calculatedFontSize = Math.max(Math.min(15, Math.round(fh * 0.6)), 8);
 
       Object.assign(el.style, {
         position: 'absolute',
@@ -321,7 +326,7 @@ export async function drawLkpdFullscreenPages(containerEl) {
         background: 'rgba(255, 255, 255, 0.92)',
         fontFamily: 'inherit',
         fontSize: calculatedFontSize + 'px',
-        padding: '3px 6px',
+        padding: fh < 22 ? '0 4px' : '3px 6px',
         borderRadius: '6px',
         boxSizing: 'border-box'
       });
@@ -329,6 +334,10 @@ export async function drawLkpdFullscreenPages(containerEl) {
     });
 
     containerEl.appendChild(pageWrap);
+  }
+  // diagnosa: buka aplikasi dengan ?debug untuk cek patch aktif
+  if (/[?&]debug\b/.test(location.search)) {
+    showToast('info', `Render PDF ${lastDpr}x (DPR perangkat ${window.devicePixelRatio || 1})`);
   }
 }
 
