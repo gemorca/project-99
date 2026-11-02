@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v16';
+const CACHE_VERSION = 'v17';
 const SHELL_CACHE = `elkpd-steam-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `elkpd-steam-runtime-${CACHE_VERSION}`;
 const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzP0pPnay3y4cBBaQNdSRmTbFPp04kYc0XsW6xiKw5wsxwrhDke4KxpjJRsOec9i2ZCCw/exec';
@@ -38,7 +38,7 @@ const SHELL_ASSETS = [
     './js/services/ocr-labels.js',
     './js/services/nilai.js',
     './js/services/html.js',
-  './js/services/labels.js',
+    './js/services/labels.js',
     './js/services/idb.js',
     './js/services/outbox-status.js',
     './js/services/progress.js',
@@ -68,7 +68,8 @@ self.addEventListener('install', (event) => {
         caches.open(SHELL_CACHE).then((cache) =>
             Promise.all(
                 SHELL_ASSETS.map((url) =>
-                    cache.add(url).catch((err) => console.warn('[SW] Gagal precache:', url, err))
+                    // cache: 'reload' = lewati HTTP cache browser, ambil versi terbaru dari server
+                    cache.add(new Request(url, { cache: 'reload' })).catch((err) => console.warn('[SW] Gagal precache:', url, err))
                 )
             )
         ).then(() => self.skipWaiting())
