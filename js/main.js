@@ -19,7 +19,6 @@ import './games/hotspot.js';
 import './views/home.js';
 import './views/steam-lab.js';
 import './views/materi.js';
-import './views/lkpd.js';
 import './views/game.js';
 import './views/evaluasi.js';
 import './views/admin.js';
