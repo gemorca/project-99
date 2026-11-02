@@ -10,7 +10,7 @@ import { renderGuruGameView, renderGuruKoreksiView, renderGuruLkpdView, renderGu
 import { renderHomeView } from '../views/home.js';
 import { renderPertemuanTabs } from './ptm-tabs.js';
 import { getPertemuanSiswa, getProgresPertemuan, markMateriDibaca, ringkasProgres } from '../services/progress.js';
-import { loadLkpdDraft, renderLkpdView } from '../views/lkpd.js';
+import * as lkpdView from '../views/lkpd.js';
 import { renderMateriView } from '../views/materi.js';
 import { renderRuangSteamView, updateSteamPertemuanInfo } from '../views/steam-lab.js';
 import { state, saveSessionState } from '../state.js';
@@ -203,6 +203,18 @@ export function renderAdminNav(container) {
   });
 }
 
+// Pengaman: js/views/lkpd.js harus export renderLkpdView & loadLkpdDraft.
+// Jika tidak ada, halaman lain tetap jalan dan hanya LKPD yang menampilkan peringatan.
+function renderLkpdSafe(paramId) {
+  if (typeof lkpdView.renderLkpdView === 'function') return lkpdView.renderLkpdView(paramId);
+  console.error('[LKPD] js/views/lkpd.js tidak mengekspor renderLkpdView. File kemungkinan salah isi.');
+  return `
+    <div class="p-8 text-center text-xs space-y-2">
+      <div class="text-red-500 font-bold text-sm">⚠️ Modul LKPD belum lengkap</div>
+      <p class="text-slate-600 font-medium">File <code>js/views/lkpd.js</code> tidak berisi <code>renderLkpdView</code>. Pulihkan file aslinya.</p>
+    </div>`;
+}
+
 export async function switchView(viewId, paramId = null) {
   state.currentView = viewId;
   state.activePertemuanId = paramId;
@@ -258,7 +270,7 @@ export async function switchView(viewId, paramId = null) {
 
       case 'lkpd-ptm':
         titleElem.textContent = 'LEMBAR KERJA PESERTA DIDIK (LKPD)';
-        viewport.innerHTML = renderPertemuanTabs(paramId, viewId) + renderLkpdView(paramId);
+        viewport.innerHTML = renderPertemuanTabs(paramId, viewId) + renderLkpdSafe(paramId);
         setTimeout(() => {
           const lkpdObj = (state.cachedData.lkpd || []).find((l) => l.id_pertemuan === paramId && l.status === 'Publish');
           const overlayContainer = document.getElementById('siswa-lkpd-overlay-container');
@@ -266,7 +278,7 @@ export async function switchView(viewId, paramId = null) {
             renderLkpdUntukSiswa(overlayContainer, lkpdObj, paramId);
           }
           const qCount = document.querySelectorAll(`[id^="lkpd-ans-"]`).length;
-          loadLkpdDraft(paramId, qCount);
+          if (typeof lkpdView.loadLkpdDraft === 'function') lkpdView.loadLkpdDraft(paramId, qCount);
         }, 150);
         break;
 
