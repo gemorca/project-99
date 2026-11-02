@@ -53,11 +53,17 @@ export async function handleAuthExpired(message) {
   }
 }
 
+const EMPTY_KEYS = ['users', 'kelas', 'pertemuan', 'materi', 'lkpd', 'games', 'evaluasi', 'soal_evaluasi', 'submissions', 'reviews'];
+
 export async function loadFromLocalStorage() {
   try {
     const saved = await getIDBCache(CACHE_KEY);
-    if (saved) {
-      state.cachedData = saved;
+    if (saved && typeof saved === 'object') {
+      const safe = {};
+      EMPTY_KEYS.forEach((k) => {
+        safe[k] = Array.isArray(saved[k]) ? saved[k] : [];
+      });
+      state.cachedData = safe;
       state.isDataLoaded = true;
     }
   } catch (e) {
@@ -139,6 +145,7 @@ export async function fetchDataFromNetwork() {
       await saveToLocalStorage();
       renderSidebarNav();
       window.dispatchEvent(new Event('progres-changed'));
+      window.dispatchEvent(new Event('data-refreshed'));
       return true;
     } else {
       throw new Error(result.message || 'Gagal mengambil data dari database.');

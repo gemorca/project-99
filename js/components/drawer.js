@@ -220,108 +220,128 @@ export async function switchView(viewId, paramId = null) {
     if (!state.isDataLoaded) return;
   }
 
-  if (viewId === 'materi-ptm' && state.currentUser) markMateriDibaca(paramId);
-  renderSidebarNav();
+  try {
+    if (viewId === 'materi-ptm' && state.currentUser) markMateriDibaca(paramId);
+  } catch (err) {
+    console.error('[switchView] markMateriDibaca gagal:', err);
+  }
 
-  switch (viewId) {
-    case 'home':
-      titleElem.textContent = 'BERANDA & DOKUMENTASI';
-      viewport.innerHTML = renderHomeView();
-      break;
+  try {
+    renderSidebarNav();
+  } catch (err) {
+    console.error('[switchView] renderSidebarNav gagal:', err);
+  }
 
-    case 'ruang-steam':
-      titleElem.textContent = 'RUANG EKSPERIMEN & LAB STEAM';
-      viewport.innerHTML = renderRuangSteamView();
-      setTimeout(() => {
-        initStandaloneSteamCanvas();
-        const selectElem = document.getElementById('steam-select-pertemuan');
-        if (selectElem && selectElem.value) {
-          updateSteamPertemuanInfo(selectElem.value);
-        }
-      }, 100);
-      break;
+  try {
+    switch (viewId) {
+      case 'home':
+        titleElem.textContent = 'BERANDA & DOKUMENTASI';
+        viewport.innerHTML = renderHomeView();
+        break;
 
-    case 'materi-ptm':
-      titleElem.textContent = 'BAHAN AJAR MATERI';
-      viewport.innerHTML = renderPertemuanTabs(paramId, viewId) + renderMateriView(paramId);
-      break;
+      case 'ruang-steam':
+        titleElem.textContent = 'RUANG EKSPERIMEN & LAB STEAM';
+        viewport.innerHTML = renderRuangSteamView();
+        setTimeout(() => {
+          initStandaloneSteamCanvas();
+          const selectElem = document.getElementById('steam-select-pertemuan');
+          if (selectElem && selectElem.value) {
+            updateSteamPertemuanInfo(selectElem.value);
+          }
+        }, 100);
+        break;
 
-    case 'lkpd-ptm':
-      titleElem.textContent = 'LEMBAR KERJA PESERTA DIDIK (LKPD)';
-      viewport.innerHTML = renderPertemuanTabs(paramId, viewId) + renderLkpdView(paramId);
-      setTimeout(() => {
-        const lkpdObj = (state.cachedData.lkpd || []).find((l) => l.id_pertemuan === paramId && l.status === 'Publish');
-        const overlayContainer = document.getElementById('siswa-lkpd-overlay-container');
-        if (lkpdObj && lkpdObj.peta_field_json && overlayContainer) {
-          renderLkpdUntukSiswa(overlayContainer, lkpdObj, paramId);
-        }
-        const qCount = document.querySelectorAll(`[id^="lkpd-ans-"]`).length;
-        loadLkpdDraft(paramId, qCount);
-      }, 150);
-      break;
+      case 'materi-ptm':
+        titleElem.textContent = 'BAHAN AJAR MATERI';
+        viewport.innerHTML = renderPertemuanTabs(paramId, viewId) + renderMateriView(paramId);
+        break;
 
-    case 'game-ptm':
-      titleElem.textContent = 'GAME INTERAKTIF PEMBELAJARAN';
-      viewport.innerHTML = renderPertemuanTabs(paramId, viewId) + renderGameView(paramId);
-      setTimeout(() => {
-        initPointerDragAndDropEngine();
-        initMatchingLineEngine();
-        redrawAllMatchingLines();
-      }, 100);
-      break;
+      case 'lkpd-ptm':
+        titleElem.textContent = 'LEMBAR KERJA PESERTA DIDIK (LKPD)';
+        viewport.innerHTML = renderPertemuanTabs(paramId, viewId) + renderLkpdView(paramId);
+        setTimeout(() => {
+          const lkpdObj = (state.cachedData.lkpd || []).find((l) => l.id_pertemuan === paramId && l.status === 'Publish');
+          const overlayContainer = document.getElementById('siswa-lkpd-overlay-container');
+          if (lkpdObj && lkpdObj.peta_field_json && overlayContainer) {
+            renderLkpdUntukSiswa(overlayContainer, lkpdObj, paramId);
+          }
+          const qCount = document.querySelectorAll(`[id^="lkpd-ans-"]`).length;
+          loadLkpdDraft(paramId, qCount);
+        }, 150);
+        break;
 
-    case 'evaluasi-ptm':
-      titleElem.textContent = 'EVALUASI PEMBELAJARAN';
-      viewport.innerHTML = renderPertemuanTabs(paramId, viewId) + renderEvaluasiView(paramId);
-      break;
+      case 'game-ptm':
+        titleElem.textContent = 'GAME INTERAKTIF PEMBELAJARAN';
+        viewport.innerHTML = renderPertemuanTabs(paramId, viewId) + renderGameView(paramId);
+        setTimeout(() => {
+          initPointerDragAndDropEngine();
+          initMatchingLineEngine();
+          redrawAllMatchingLines();
+        }, 100);
+        break;
 
-    case 'admin-users':
-      titleElem.textContent = 'KELOLA PENGGUNA SISTEM';
-      renderAdminUsersView(viewport);
-      break;
+      case 'evaluasi-ptm':
+        titleElem.textContent = 'EVALUASI PEMBELAJARAN';
+        viewport.innerHTML = renderPertemuanTabs(paramId, viewId) + renderEvaluasiView(paramId);
+        break;
 
-    case 'admin-classes':
-      titleElem.textContent = 'KELOLA DATA KELAS';
-      renderAdminClassesView(viewport);
-      break;
+      case 'admin-users':
+        titleElem.textContent = 'KELOLA PENGGUNA SISTEM';
+        renderAdminUsersView(viewport);
+        break;
 
-    case 'guru-pertemuan':
-      titleElem.textContent = 'KELOLA PERTEMUAN PEMBELAJARAN';
-      renderGuruPertemuanView(viewport);
-      break;
+      case 'admin-classes':
+        titleElem.textContent = 'KELOLA DATA KELAS';
+        renderAdminClassesView(viewport);
+        break;
 
-    case 'guru-materi':
-      titleElem.textContent = 'KELOLA BAHAN AJAR';
-      renderGuruMateriView(viewport);
-      break;
+      case 'guru-pertemuan':
+        titleElem.textContent = 'KELOLA PERTEMUAN PEMBELAJARAN';
+        renderGuruPertemuanView(viewport);
+        break;
 
-    case 'guru-lkpd':
-      titleElem.textContent = 'KELOLA LKPD SISWA';
-      renderGuruLkpdView(viewport);
-      break;
+      case 'guru-materi':
+        titleElem.textContent = 'KELOLA BAHAN AJAR';
+        renderGuruMateriView(viewport);
+        break;
 
-    case 'guru-game':
-      titleElem.textContent = 'KELOLA GAME INTERAKTIF';
-      renderGuruGameView(viewport);
-      break;
+      case 'guru-lkpd':
+        titleElem.textContent = 'KELOLA LKPD SISWA';
+        renderGuruLkpdView(viewport);
+        break;
 
-    case 'guru-soal':
-      titleElem.textContent = 'KELOLA EVALUASI & BANK SOAL';
-      renderGuruSoalView(viewport);
-      break;
+      case 'guru-game':
+        titleElem.textContent = 'KELOLA GAME INTERAKTIF';
+        renderGuruGameView(viewport);
+        break;
 
-    case 'guru-koreksi':
-      titleElem.textContent = 'KOREKSI JAWABAN SISWA';
-      renderGuruKoreksiView(viewport);
-      break;
+      case 'guru-soal':
+        titleElem.textContent = 'KELOLA EVALUASI & BANK SOAL';
+        renderGuruSoalView(viewport);
+        break;
 
-    case 'guru-rekap':
-      titleElem.textContent = 'BUKU NILAI & REKAPITULASI';
-      renderGuruRekapView(viewport);
-      break;
+      case 'guru-koreksi':
+        titleElem.textContent = 'KOREKSI JAWABAN SISWA';
+        renderGuruKoreksiView(viewport);
+        break;
 
-    default:
-      switchView('home');
+      case 'guru-rekap':
+        titleElem.textContent = 'BUKU NILAI & REKAPITULASI';
+        renderGuruRekapView(viewport);
+        break;
+
+      default:
+        switchView('home');
+    }
+  } catch (err) {
+    console.error('[switchView] render gagal:', viewId, err);
+    viewport.innerHTML = `
+      <div class="p-8 text-center text-xs space-y-3">
+        <div class="text-red-500 font-bold text-sm">⚠️ Halaman gagal ditampilkan</div>
+        <p class="text-slate-600 font-medium">${e(err && err.message ? err.message : 'Terjadi kesalahan.')}</p>
+        <button onclick="retryLoadData()" class="px-4 py-2 bg-brand-blue text-white font-bold rounded-xl shadow">🔄 Muat Ulang Data</button>
+      </div>`;
+    return;
   }
 
   if (window.MathJax && window.MathJax.typesetPromise) {
@@ -339,6 +359,13 @@ window.addEventListener('progres-changed', () => {
   }
   const tabs = document.getElementById('ptm-tabs');
   if (tabs) tabs.outerHTML = renderPertemuanTabs(state.activePertemuanId, state.currentView);
+});
+
+window.addEventListener('data-refreshed', () => {
+  const viewport = document.getElementById('content-viewport');
+  if (!viewport || !state.isDataLoaded) return;
+  const kosong = !viewport.innerHTML.trim() || viewport.textContent.includes('Memuat data dari database');
+  if (kosong) switchView(state.currentView, state.activePertemuanId);
 });
 
 window.toggleDrawer = toggleDrawer;
