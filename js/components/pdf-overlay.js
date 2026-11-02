@@ -13,6 +13,25 @@ function activeRoot() {
   return document.getElementById('desktop-lkpd-pages') || document;
 }
 
+// Render halaman PDF tajam di layar DPR tinggi (HP).
+// Ukuran CSS = viewport; piksel canvas = viewport x dpr.
+async function renderPageSharp(page, canvas, viewport) {
+  let dpr = Math.min(window.devicePixelRatio || 1, 3);
+  // batas piksel canvas iOS/Android; turunkan dpr bila kebesaran
+  while (dpr > 1 && viewport.width * viewport.height * dpr * dpr > 16e6) dpr -= 0.25;
+
+  canvas.width = Math.floor(viewport.width * dpr);
+  canvas.height = Math.floor(viewport.height * dpr);
+  canvas.style.width = viewport.width + 'px';
+  canvas.style.height = viewport.height + 'px';
+
+  await page.render({
+    canvasContext: canvas.getContext('2d'),
+    viewport,
+    transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null
+  }).promise;
+}
+
 function readAnswers(root) {
   const out = {};
   (root || document).querySelectorAll('.lkpd-fill-input').forEach((el) => {
@@ -127,10 +146,8 @@ export async function renderDesktopInlinePdfPages(containerWrap, pdfDoc, fieldMa
     pageWrap.className = 'shadow-md rounded-xl overflow-hidden bg-white border shrink-0 mx-auto';
 
     const canvas = document.createElement('canvas');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
     pageWrap.appendChild(canvas);
-    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    await renderPageSharp(page, canvas, viewport);
 
     const fields = fieldMap.fields[pageNum] || [];
     fields.forEach((f) => {
@@ -276,10 +293,8 @@ export async function drawLkpdFullscreenPages(containerEl) {
     pageWrap.style.height = viewport.height + 'px';
 
     const canvas = document.createElement('canvas');
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
     pageWrap.appendChild(canvas);
-    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    await renderPageSharp(page, canvas, viewport);
 
     const fields = fieldMap.fields[pageNum] || [];
     fields.forEach((f) => {

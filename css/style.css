@@ -138,6 +138,14 @@ summary:focus-visible {
     pointer-events: auto;
 }
 
+/* Canvas PDF: ukuran CSS diatur lewat style.width/height (JS); cegah Tailwind preflight melar/mengecilkan */
+#desktop-lkpd-pages canvas,
+#lkpd-fullscreen-content canvas,
+.lkpd-fullscreen-page-wrap canvas {
+    display: block;
+    max-width: none;
+}
+
 #lkpd-fullscreen-modal {
     touch-action: pan-x pan-y pinch-zoom;
 }
