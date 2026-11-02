@@ -24,6 +24,7 @@ import './views/game.js';
 import './views/evaluasi.js';
 import './views/admin.js';
 import './views/guru.js';
+import './components/pull-refresh.js';
 
 import { switchView } from './components/drawer.js';
 import { fetchAllInitialData } from './services/api.js';
